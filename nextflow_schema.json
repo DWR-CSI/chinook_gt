@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://raw.githubusercontent.com/DWR-CSI/Chinook_gt/master/nextflow_schema.json",
+  "title": "Transition-GT pipeline parameters",
+  "description": "Schema for the Transition-GT pipeline parameters",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Give a name to this project or run. No spaces or special characters.",
+      "default": "YourProject1"
+    },
+    "input": {
+      "type": "string",
+      "description": "Path to input FastQ files (must be paired-end)",
+      "default": "az://seqera1/raw_data/test/*_{1,2}.fastq.gz"
+    },
+    "outdir": {
+      "type": "string",
+      "description": "Directory to save results",
+      "default": "az://seqera1/results"
+    },
+    "adapter_file": {
+      "type": "string",
+      "description": "Path to the adapter sequences file for Trimmomatic",
+      "default": "az://your-container/path/to/TruSeq3-PE-2.fa"
+    },
+    "min_overlap": {
+      "type": "integer",
+      "description": "Minimum overlap length for read merging",
+      "default": 3
+    },
+    "max_overlap": {
+      "type": "integer",
+      "description": "Maximum overlap length for read merging",
+      "default": 400
+    },
+    "reference": {
+      "type": "string",
+      "description": "Path to the reference genome for BWA alignment",
+      "default": "az://your-container/path/to/reference.fasta"
+    }
+  }
+}

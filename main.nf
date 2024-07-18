@@ -26,9 +26,13 @@ include { MULTIQC } from './modules/multiqc'
 
 
 // Define input channels
-ch_input_fastq = Channel.fromPath(params.input_fastq, checkIfExists: true)
-
-
+Channel
+    .fromFilePairs('path/to/fastqs/*_{1,2}.fastq.gz', checkIfExists: true)
+    .map { sampleId, files -> 
+        return tuple(sampleId, files[0], files[1])
+    }
+    .set { ch_input_fastq }
+    
 workflow {
     FASTQC(ch_input_fastq)
     TRIMMOMATIC(ch_input_fastq, params.adapter_file, params.trim_params)

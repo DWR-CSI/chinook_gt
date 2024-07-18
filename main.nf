@@ -50,7 +50,7 @@ workflow {
     // Collect all QC files
     ch_multiqc_files = Channel.empty()
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.fastqc_results)
-    //ch_multiqc_files = ch_multiqc_files.mix(TRIMMOMATIC.out.log)
+    ch_multiqc_files = ch_multiqc_files.mix(TRIMMOMATIC.out.log)
     //ch_multiqc_files = ch_multiqc_files.mix(FLASH2.out.log)
     //ch_multiqc_files = ch_multiqc_files.mix(BWA_MEM.out.log)
     //ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats)

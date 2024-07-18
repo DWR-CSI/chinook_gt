@@ -1,0 +1,5 @@
+report*
+.nextflow*
+timeline*
+trace*
+mount_*.sh

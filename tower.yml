@@ -1,0 +1,47 @@
+version: 1.0
+
+manifest:
+  name: Transition-GT
+  description: Process GT-seq data for Transition panel
+params:
+  - name: project
+    label: Project Name
+    description: Give a name to this project or run. No spaces or special characters.
+    type: string
+    default: "YourProject1"
+
+  - name: input
+    label: Input FastQ files
+    description: Path to input FastQ files (must be paired-end)
+    type: string
+    default: "az://seqera1/raw_data/test/*_{1,2}.fastq.gz"
+
+  - name: outdir
+    label: Output directory
+    description: Directory to save results
+    type: string
+    default: "az://seqera1/results"
+
+  - name: adapter_file
+    label: Adapter sequences file
+    description: Path to the adapter sequences file for Trimmomatic
+    type: string
+    default: "az://your-container/path/to/TruSeq3-PE-2.fa"
+
+  - name: min_overlap
+    label: Minimum overlap for FLASH2
+    description: Minimum overlap length for read merging
+    type: integer
+    default: 3
+
+  - name: max_overlap
+    label: Maximum overlap for FLASH2
+    description: Maximum overlap length for read merging
+    type: integer
+    default: 400
+
+  - name: reference
+    label: Reference genome
+    description: Path to the reference genome for BWA alignment
+    type: string
+    default: "az://your-container/path/to/reference.fasta"

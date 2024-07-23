@@ -19,10 +19,11 @@ nextflow.enable.dsl = 2
 // Import modules
 include { FASTQC } from './modules/fastqc'
 include { TRIMMOMATIC } from './modules/trimmomatic'
-//include { FLASH2 } from './modules/flash2'
-//include { BWA_MEM } from './modules/bwa_mem'
-//include { SAMTOOLS } from './modules/samtools'
+include { FLASH2 } from './modules/flash2'
+include { BWA_MEM } from './modules/bwa_mem'
+include { SAMTOOLS } from './modules/samtools'
 include { MULTIQC } from './modules/multiqc'
+include { INDEX_REFERENCE } from './modules/index_reference'
 
 
 // Define input channels
@@ -36,24 +37,27 @@ ch_input_fastq = Channel // all fastq files for FastQC
 
     
 workflow {
-  //      ch_reads = Channel
-    //    .fromFilePairs(params.input, checkIfExists: true)
-      //  .view { sample_id, files -> 
-        //    "Sample: $sample_id, Files: $files, Paths: ${files.collect { it.toString() }}"
-        //}
+
+    reference_ch = channel.fromPath(params.reference)
+    
+    index_ch = INDEX_REFERENCE(reference_ch)
     FASTQC(ch_input_fastq)
+    
     TRIMMOMATIC(ch_input_fastq_pairs, params.adapter_file, params.trim_params)
-    //FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.max_overlap)
-    //BWA_MEM(FLASH2.out.merged, params.reference)
-    //SAMTOOLS(BWA_MEM.out.aligned_sam)
+    FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.max_overlap)
+
+    bwa_input = FLASH2.out.merged.combine(index_ch)
+    BWA_MEM(bwa_input)
+    SAMTOOLS(BWA_MEM.out.aligned_sam)
     
     // Collect all QC files
     ch_multiqc_files = Channel.empty()
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.fastqc_results)
     ch_multiqc_files = ch_multiqc_files.mix(TRIMMOMATIC.out.log)
-    //ch_multiqc_files = ch_multiqc_files.mix(FLASH2.out.log)
+    ch_multiqc_files = ch_multiqc_files.mix(FLASH2.out.log)
     //ch_multiqc_files = ch_multiqc_files.mix(BWA_MEM.out.log)
-    //ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats)
+    ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect{it[1]})
+    //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
     MULTIQC(ch_multiqc_files.collect())
 }
 

@@ -1,6 +1,6 @@
 process FASTQC {
     tag "FASTQC"
-    label 'process_medium'
+    label 'process_high'
     container 'quay.io/biocontainers/fastqc:0.11.9--0'
     publishDir "${params.outdir}/${params.project}/fastqc", mode: 'copy'
 

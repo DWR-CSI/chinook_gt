@@ -1,6 +1,6 @@
 process FLASH2 {
     tag "FLASH2 on ${sample_id}"
-    label 'process_medium'
+    label 'process_small'
     container 'quay.io/biocontainers/flash2:2.2.00--ha92aebf_1'
 
     publishDir "${params.outdir}/${params.project}/flash2", mode: 'copy'

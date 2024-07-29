@@ -1,6 +1,6 @@
 process TRIMMOMATIC {
     tag "Trimmomatic on ${sample_id}"
-    label 'process_medium'
+    label 'process_small'
     container 'quay.io/biocontainers/trimmomatic:0.39--hdfd78af_2'
 
     publishDir "${params.outdir}/${params.project}/trimmed", mode: 'copy'

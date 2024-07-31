@@ -1,7 +1,7 @@
 process BWA_MEM {
     tag "BWA MEM on ${sample_id}"
     label 'process_high'
-    container 'biocontainers/bwa:v0.7.17_cv1'
+    container 'docker.io/biocontainers/bwa:v0.7.17_cv1'
 
     publishDir "${params.outdir}/${params.project}/bwa_mem", mode: 'copy'
 

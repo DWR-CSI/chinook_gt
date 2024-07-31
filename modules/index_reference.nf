@@ -1,7 +1,7 @@
 process INDEX_REFERENCE {
     tag "Indexing reference genome"
     label 'process_high'
-    container 'biocontainers/bwa:v0.7.17_cv1'
+    container 'docker.io/biocontainers/bwa:v0.7.17_cv1'
     input:
     path reference
 

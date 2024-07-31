@@ -1,6 +1,6 @@
 process MULTIQC {
     tag "MULTIQC on ${params.project}"
-    label 'process_small'
+    label 'process_high'
     container 'quay.io/biocontainers/multiqc:1.23--pyhdfd78af_0'
 
     publishDir "${params.outdir}/${params.project}/multiqc", mode: 'copy'

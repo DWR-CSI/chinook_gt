@@ -1,0 +1,3 @@
+# Input
+input: "az://nextflow/raw_data/L0001/*_L0001_R{1,2}_001.fastq.gz"
+project: 'L0001'

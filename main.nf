@@ -24,6 +24,7 @@ include { BWA_MEM } from './modules/bwa_mem'
 include { SAMTOOLS } from './modules/samtools'
 include { MULTIQC } from './modules/multiqc'
 include { INDEX_REFERENCE } from './modules/index_reference'
+include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
 
 
 // Define input channels
@@ -49,6 +50,13 @@ workflow {
     bwa_input = FLASH2.out.merged.combine(index_ch)
     BWA_MEM(bwa_input)
     SAMTOOLS(BWA_MEM.out.aligned_sam)
+    // Collect all idxstats files
+    idxstats_files = SAMTOOLS.out.idxstats
+        .map { it -> it[1] }  // Extract just the file path from the tuple
+        .collect()            // Collect all files into a single list
+
+    // Run the analysis
+    ANALYZE_IDXSTATS(idxstats_files)
     
     // Collect all QC files
     ch_multiqc_files = Channel.empty()

@@ -14,6 +14,9 @@ process GEN_MHP_SAMPLE_SHEET {
     script:
     """
     #!/bin/bash
-    echo "$aligned_sam_files" >> ${params.project}_mhp_samplesheet.tsv
+    for file in \$(ls \$aligned_sam_files); do
+        echo -e "\$file\t\${file::-8}\tNA" >> "${params.project}_mhp_samplesheet.tsv"
+    done
+    sort -u -o "${params.project}_mhp_samplesheet.tsv" "${params.project}_mhp_samplesheet.tsv"
     """
 }

@@ -60,6 +60,7 @@ workflow {
     ANALYZE_IDXSTATS(idxstats_files)
 
     GEN_MHP_SAMPLE_SHEET(BWA_MEM.out.aligned_sam.map { it -> it[1] }.collect())
+    GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet.view { println "Debug: MHP samplesheet: $it" }
     
     // Collect all QC files
     ch_multiqc_files = Channel.empty()

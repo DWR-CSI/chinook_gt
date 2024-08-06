@@ -2,7 +2,7 @@ process ANALYZE_IDXSTATS {
     tag "Analyzing idxstats"
     label 'process_small'
     publishDir "${params.outdir}/${params.project}/idxstats_analysis", mode: 'copy'
-    container "docker.io/bnguyen29/r-rubias:1.0.2"
+    container "docker.io/bnguyen29/r-rubias:1.0.4"
 
     input:
     path idxstats_files
@@ -13,6 +13,6 @@ process ANALYZE_IDXSTATS {
     
     script:
     """
-    Rscript $projectDir/bin/analyze_idxstats.R . $PWD ${params.n_loci}
+    analyze_idxstats.R . . ${params.n_loci}
     """
 }

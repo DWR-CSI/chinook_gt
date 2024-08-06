@@ -25,7 +25,7 @@ include { SAMTOOLS } from './modules/samtools'
 include { MULTIQC } from './modules/multiqc'
 include { INDEX_REFERENCE } from './modules/index_reference'
 include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
-
+include { GEN_MHP_SAMPLE_SHEET } from './modules/mhplot_prep'
 
 // Define input channels
 Channel // paired
@@ -39,12 +39,13 @@ ch_input_fastq = Channel // all fastq files for FastQC
     
 workflow {
 
-    reference_ch = channel.fromPath(params.reference)
+    reference_ch = channel.fromPath(params.reference) // Maybe load the adapter file, vcfs, and others like this?
+    adapters_ch = channel.fromPath(params.adapter_file)
     
     index_ch = INDEX_REFERENCE(reference_ch)
     FASTQC(ch_input_fastq)
-    
-    TRIMMOMATIC(ch_input_fastq_pairs, params.adapter_file, params.trim_params)
+    ch_fastq_adapters_combined = ch_input_fastq_pairs.combine(adapters_ch)
+    TRIMMOMATIC(ch_fastq_adapters_combined, params.trim_params)
     FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.max_overlap)
 
     bwa_input = FLASH2.out.merged.combine(index_ch)
@@ -57,6 +58,8 @@ workflow {
 
     // Run the analysis
     ANALYZE_IDXSTATS(idxstats_files)
+
+    GEN_MHP_SAMPLE_SHEET(BWA_MEM.out.aligned_sam.map { it -> it[1] }.collect())
     
     // Collect all QC files
     ch_multiqc_files = Channel.empty()

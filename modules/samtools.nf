@@ -1,6 +1,6 @@
 process SAMTOOLS {
     tag "SAMTOOLS on ${sample_id}"
-    label 'process_medium'
+    label 'process_small'
     container 'quay.io/biocontainers/samtools:1.20--h50ea8bc_1'
 
     publishDir "${params.outdir}/${params.project}/samtools", mode: 'copy', pattern: '*_sorted.bam*'

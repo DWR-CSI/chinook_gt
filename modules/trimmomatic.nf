@@ -6,8 +6,7 @@ process TRIMMOMATIC {
     publishDir "${params.outdir}/${params.project}/trimmed", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(reads)
-    path(adapter_file)
+    tuple val(sample_id), path(reads), path(adapter_file)
     val(trim_params)
 
     output:

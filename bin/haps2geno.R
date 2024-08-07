@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 #### Genotyping with the MykroHap panel ####
 
 ## Borrowed some code from Neil for this ##

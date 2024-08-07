@@ -75,6 +75,6 @@ process HAP2GENO {
 
     script:
     """
-    Rscript hap2geno.R ${hap_file} ${params.project}
+    haps2geno.R ${hap_file} ${params.project}
     """
 }

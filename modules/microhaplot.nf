@@ -55,7 +55,7 @@ process GEN_HAPS {
 
     script:
     """
-    Rscript gen_haps.R ${params.project}
+    gen_haps.R ${params.project}
     """
 }
 

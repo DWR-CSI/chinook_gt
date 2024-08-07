@@ -69,9 +69,9 @@ process HAP2GENO {
     path hap_file
 
     output:
-    path "_genotypes.txt", emit: geno
-    path "_numgenotypes.txt", emit: numgeno
-    path "_missingdata.txt", emit: missing
+    path "*_genotypes.txt", emit: geno
+    path "*_numgenotypes.txt", emit: numgeno
+    path "*_missingdata.txt", emit: missing
 
     script:
     """

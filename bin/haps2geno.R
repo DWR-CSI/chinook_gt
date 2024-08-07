@@ -3,6 +3,7 @@
 ## Borrowed some code from Neil for this ##
 
 library(tidyverse)
+args <- commandArgs(trailingOnly = TRUE)
 haps_file <- args[1]
 project_name <- args[2]
 

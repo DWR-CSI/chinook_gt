@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 library(dplyr)
+args <- commandArgs(trailingOnly = TRUE)
 project_name <- args[1]
 
 # 1. Find the correct .rds file

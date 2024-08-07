@@ -25,7 +25,7 @@ include { SAMTOOLS } from './modules/samtools'
 include { MULTIQC } from './modules/multiqc'
 include { INDEX_REFERENCE } from './modules/index_reference'
 include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
-include { GEN_MHP_SAMPLE_SHEET } from './modules/mhplot_prep'
+include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO } from './modules/microhaplot.nf'
 
 // Define input channels
 Channel // paired
@@ -71,5 +71,11 @@ workflow {
     ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect{it[1]})
     //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
     MULTIQC(ch_multiqc_files.collect())
+
+    // Run the microhaplotype analysis
+    vcf_file_ch = Channel.fromPath(params.baseline_vcf)
+    PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet, vcf_file_ch, BWA_MEM.out.aligned_sam.map { it -> it[1] }.collect())
+    GEN_HAPS(PREP_MHP_RDS.out.rds)
+    HAP2GENO(GEN_HAPS.out.haps)
 }
 

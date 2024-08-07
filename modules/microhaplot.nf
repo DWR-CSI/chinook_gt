@@ -51,7 +51,7 @@ process GEN_HAPS {
     path rds_files
 
     output:
-    path "observed_unfiltered_haplotype_rownames.csv", emit: haps
+    path "*_observed_unfiltered_haplotype.csv", emit: haps
 
     script:
     """

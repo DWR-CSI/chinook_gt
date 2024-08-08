@@ -168,5 +168,5 @@ write.table(hap2col, file = hap2col_output, sep = "\t", row.names = F, quote = F
 hap2colnum_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m%d"),"_numgenotypes", ".txt")
 write.table(hap2col_num, file = hap2colnum_output, sep = "\t", row.names = F, quote = F)
 
-#missing_data_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m%d"), "_missingdata", ".txt")
-#write.table(hap_missdata, file = hap2colnum_output, sep = "\t", row.names = F, quote = F)
+missing_data_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m%d"), "_missingdata", ".txt")
+write.table(hap_missdata, file = missing_data_output, sep = "\t", row.names = F, quote = F)

@@ -34,14 +34,11 @@ Channel // paired
 ch_input_fastq = Channel // all fastq files for FastQC
     .fromPath(params.input, checkIfExists: true)
     .collect()
-
+reference_ch = channel.fromPath(params.reference) // Maybe load the adapter file, vcfs, and others like this?
+adapters_ch = channel.fromPath(params.adapter_file)
 
     
 workflow {
-
-    reference_ch = channel.fromPath(params.reference) // Maybe load the adapter file, vcfs, and others like this?
-    adapters_ch = channel.fromPath(params.adapter_file)
-    
     index_ch = INDEX_REFERENCE(reference_ch)
     FASTQC(ch_input_fastq)
     ch_fastq_adapters_combined = ch_input_fastq_pairs.combine(adapters_ch)

@@ -1,3 +1,4 @@
 # Input
 input: "az://nextflow/raw_data/L0001/*_L001_R{1,2}_001.fastq.gz"
 project: 'L0001'
+locus_index: 'az://nextflow/reference/transition_panel/locus_indices_latest.csv'

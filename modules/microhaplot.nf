@@ -67,14 +67,41 @@ process HAP2GENO {
 
     input:
     path hap_file
+    path locindex
 
     output:
     path "*_genotypes.txt", emit: geno
     path "*_numgenotypes.txt", emit: numgeno
     path "*_missingdata.txt", emit: missing
+    path "*_locus_indices.csv", emit: new_index
 
     script:
     """
-    haps2geno.R ${hap_file} ${params.project}
+    haps2geno.R ${hap_file} ${params.project} ${locindex}
+    """
+}
+
+process CHECK_FILE_UPDATE {
+    tag "Comparing loci indices"
+    label 'process_small'
+    container 'ubuntu:latest'
+    input:
+    path new_file
+    path old_file
+
+    output:
+    stdout
+
+    script:
+    """
+    if [ -f "${old_file}" ]; then
+        if cmp -s "${new_file}" "${old_file}"; then
+            echo "Locus index files are identical. No update needed for ${old_file}"
+        else
+            echo "Input and output locus index files are different. ${old_file} should be updated with content from ${new_file}"
+        fi
+    else
+        echo "${old_file} does not exist. It should be created with content from ${new_file}"
+    fi
     """
 }

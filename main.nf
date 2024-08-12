@@ -25,7 +25,7 @@ include { SAMTOOLS } from './modules/samtools'
 include { MULTIQC } from './modules/multiqc'
 include { INDEX_REFERENCE } from './modules/index_reference'
 include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
-include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO } from './modules/microhaplot.nf'
+include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
 
 // Define input channels
 Channel // paired
@@ -36,6 +36,7 @@ ch_input_fastq = Channel // all fastq files for FastQC
     .collect()
 reference_ch = channel.fromPath(params.reference) // Maybe load the adapter file, vcfs, and others like this?
 adapters_ch = channel.fromPath(params.adapter_file)
+locus_index_ch = channel.fromPath(params.locus_index)
 
     
 workflow {
@@ -72,6 +73,7 @@ workflow {
     vcf_file_ch = Channel.fromPath(params.baseline_vcf)
     PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet, vcf_file_ch, BWA_MEM.out.aligned_sam.map { it -> it[1] }.collect())
     GEN_HAPS(PREP_MHP_RDS.out.rds)
-    HAP2GENO(GEN_HAPS.out.haps)
+    HAP2GENO(GEN_HAPS.out.haps, locus_index_ch)
+    CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
 }
 

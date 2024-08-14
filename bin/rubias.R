@@ -12,14 +12,17 @@ unks <- read_csv(args[1]) %>%
     rename_at(vars(ends_with(".2")), ~str_replace(., "\\.2$", ".1")) %>%
     mutate(sample_type = "mixture", repunit = NA) %>%
     rename(collection = group, indiv = indiv.ID) %>%
-    rename_all(~gsub("-", ".", .))
+    rename_all(~gsub("-", ".", .)) # dashes not accepted in column names
 ref_baseline <- read_csv(args[2]) %>%
-    mutate_if(is.double, as.integer)
+  mutate_if(is.double, as.integer) %>%
+  rename_all(~gsub("-", ".", .))
 project_name <- args[3]
 reporting_groups <- as.integer(args[4])
 if (reporting_groups != 2 && reporting_groups != 4) {
     stop("reporting_groups must be 2 or 4")
 }
+
+show_missing_data <- as.logical(args[5])
 
 
 
@@ -27,14 +30,27 @@ if (reporting_groups != 2 && reporting_groups != 4) {
 unk_match <- unks %>% 
     select(any_of(names(ref_baseline)))
 
-ref_match <- ref_baseline%>% 
-  select(any_of(names(unk_match)))
+if (show_missing_data == TRUE) {
+    # Add blank/NA data for columns that are in ref_baseline but missing from unk_match
+    missing_cols <- setdiff(names(ref_baseline), names(unk_match))
+    for (col in missing_cols) {
+      unk_match[[col]] <- as.integer(-9) # -9 is the missing data code
+    }
+  ref_match <- ref_baseline
+    unk_match <- unk_match %>% 
+  select(names(ref_match))
+    
+} else {
+    # Remove columns that are in ref_baseline but missing from unk_match
+    ref_match <- ref_baseline %>% 
+        select(any_of(names(unk_match)))
+}
 
 
-chinook_all <- bind_rows(unk_match, ref_baseline) %>%
-    filter(collection != "Coho")
+chinook_all <- bind_rows(unk_match, ref_match) %>%
+  filter(collection != "Coho")
 
-    #add ploidy check and correction
+
 
 # Matching --------------------
 matchy_pairs <- close_matching_samples(D = chinook_all, 
@@ -68,8 +84,8 @@ mix_est_export <- mix_results[,1:9]
 
 write.table(
     mix_est_export, 
-    file = stringr::str_c(project_name, "_mix_estimates.csv"),
-    sep = ",", 
+    file = stringr::str_c(project_name, "_mix_estimates.tsv"),
+    sep = "\t", 
     row.names = FALSE
     )
 

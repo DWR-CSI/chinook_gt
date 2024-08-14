@@ -1,6 +1,6 @@
 process GEN_MHP_SAMPLE_SHEET {
     tag "Generate MHP samplesheet"
-    label 'process_small'
+    label 'process_xsmall'
     container 'ubuntu:latest'
 
     publishDir "${params.outdir}/${params.project}", mode: 'copy', pattern: '*_mhp_samplesheet.tsv'
@@ -83,7 +83,7 @@ process HAP2GENO {
 
 process CHECK_FILE_UPDATE {
     tag "Comparing loci indices"
-    label 'process_small'
+    label 'process_xsmall'
     container 'ubuntu:latest'
     input:
     path new_file

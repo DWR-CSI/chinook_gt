@@ -26,6 +26,7 @@ include { MULTIQC } from './modules/multiqc'
 include { INDEX_REFERENCE } from './modules/index_reference'
 include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
 include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
+include { RUN_RUBIAS } from './modules/rubias.nf'
 
 // Define input channels
 Channel // paired
@@ -37,6 +38,7 @@ ch_input_fastq = Channel // all fastq files for FastQC
 reference_ch = channel.fromPath(params.reference) // Maybe load the adapter file, vcfs, and others like this?
 adapters_ch = channel.fromPath(params.adapter_file)
 locus_index_ch = channel.fromPath(params.locus_index)
+baseline_ch = channel.fromPath(params.baseline)
 
     
 workflow {
@@ -75,5 +77,6 @@ workflow {
     GEN_HAPS(PREP_MHP_RDS.out.rds)
     HAP2GENO(GEN_HAPS.out.haps, locus_index_ch)
     CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
+    RUN_RUBIAS(HAP2GENO.out.numgeno, baseline_ch)
 }
 

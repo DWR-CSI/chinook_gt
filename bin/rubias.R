@@ -46,10 +46,11 @@ if (show_missing_data == TRUE) {
         select(any_of(names(unk_match)))
 }
 
-
 chinook_all <- bind_rows(unk_match, ref_match) %>%
-  filter(collection != "Coho")
-
+  filter(collection != "Coho") %>%
+  mutate(across(everything(), ~if_else(. == -9, NA, .)))
+unk_match <- unk_match %>% 
+  mutate(across(everything(), ~if_else(. == -9, NA, .)))
 
 
 # Matching --------------------

@@ -272,4 +272,4 @@ hap2col_num[is.na(hap2col_num)]  <- as.numeric("-9") #a last tidbit of cleanup f
 hap2col_num_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m%d"),"_numgenotypes.txt")
 write_csv(hap2col_num, file = hap2col_num_output, na = "#N/A")
 new_indices_filename <- stringr::str_c(format(Sys.Date(), "%Y%m%d"), "_", project_name, "_locus_indices.csv")
-write_csv(new_indices_long, file = new_indices_filename)
+write_csv(new_indices_long, file = new_indices_filename, quote = "all")

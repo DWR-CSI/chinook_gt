@@ -1,10 +1,9 @@
 # Input
-input: "az://nextflow/raw_data/L0001/*_L001_R{1,2}_001.fastq.gz"
-project: 'L0001'
+input: "az://nextflow/raw_data/cdfw140/*_L001_R{1,2}_001.fastq.gz"
+project: 'cdfw140'
 outdir: 'az://nextflow/results/transition'
 locus_index: 'az://nextflow/reference/transition_panel/locus_indices_latest.csv'
 reporting_groups: '4'
 baseline: 'az://nextflow/reference/transition_panel/101023_Chin_baseline_noRoSA_4repunits.csv'
 panel: 'transition'
-reference: 'az://nextflow/reference/transition_panel/full_panel.fasta'
 baseline_vcf: 'az://nextflow/reference/transition_panel/chinook_baseline.vcf'

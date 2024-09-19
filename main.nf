@@ -27,6 +27,7 @@ include { INDEX_REFERENCE } from './modules/index_reference'
 include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
 include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
 include { RUN_RUBIAS } from './modules/rubias.nf'
+include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
 
 // Define input channels
 Channel // paired
@@ -39,7 +40,7 @@ reference_ch = channel.fromPath(params.reference) // Maybe load the adapter file
 adapters_ch = channel.fromPath(params.adapter_file)
 locus_index_ch = channel.fromPath(params.locus_index)
 baseline_ch = channel.fromPath(params.baseline)
-
+ots28_baseline_ch = channel.fromPath(params.ots28_baseline)
     
 workflow {
     index_ch = INDEX_REFERENCE(reference_ch)
@@ -77,6 +78,10 @@ workflow {
     GEN_HAPS(PREP_MHP_RDS.out.rds)
     HAP2GENO(GEN_HAPS.out.haps, locus_index_ch)
     CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
+
+    // Run Structure and Rubias analyses
+    STRUC_PARAMS(ots28_baseline_ch, HAP2GENO.out.numgeno_OTS28)
+    STRUCTURE(STRUC_PARAMS.out.structure_input, STRUC_PARAMS.out.m_params, STRUC_PARAMS.out.e_params)
     RUN_RUBIAS(HAP2GENO.out.numgeno, baseline_ch)
 }
 

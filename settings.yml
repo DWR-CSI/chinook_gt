@@ -8,3 +8,4 @@ baseline: 'az://nextflow/reference/transition_panel/101023_Chin_baseline_noRoSA_
 panel: 'transition'
 reference: 'az://nextflow/reference/transition_panel/full_panel.fasta'
 baseline_vcf: 'az://nextflow/reference/transition_panel/chinook_baseline.vcf'
+ots28_baseline: 'az://nextflow/reference/full_panel/RoSA_baseline_partial_infile.txt'

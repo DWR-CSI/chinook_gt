@@ -10,6 +10,15 @@ project_name <- args[2]
 locus_indices <- args[3] # use latest version
 na_string_var = "ND"
 
+# Functions --------
+# Function to ensure a column exists, creating it with -9 if it doesn't
+ensure_column <- function(df, col_name) {
+  if (!col_name %in% names(df)) {
+    df[[col_name]] <- -9
+  }
+  return(df)
+}
+
 # Read in the unfiltered raw haplotype data
 hap_raw <- read_csv(haps_file)
 # Drop the first column if the first column is an index
@@ -273,3 +282,34 @@ hap2col_num_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m
 write_csv(hap2col_num, file = hap2col_num_output, na = "#N/A")
 new_indices_filename <- stringr::str_c(format(Sys.Date(), "%Y%m%d"), "_", project_name, "_locus_indices.csv")
 write_csv(new_indices_long, file = new_indices_filename, quote = "all")
+
+hap2col_num_OTS28_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m%d"),"_numgenotypes_OTS28.txt")
+# List of columns we want to select
+columns_to_select <- c(
+  "indiv.ID", "numcol1", "numcol2",
+  "NC_037124.1:12267397-12267697.1", "NC_037124.1:12267397-12267697.2",
+  "NC_037124.1:12270118-12270418.1", "NC_037124.1:12270118-12270418.2",
+  "NC_037124.1:12272852-12273152.1", "NC_037124.1:12272852-12273152.2",
+  "NC_037124.1:12277401-12277701_Tasha-SNP-1.1", "NC_037124.1:12277401-12277701_Tasha-SNP-1.2",
+  "NC_037124.1:12279142-12279478.1", "NC_037124.1:12279142-12279478.2",
+  "NC_037124.1:12281207-12281551.1", "NC_037124.1:12281207-12281551.2",
+  "NC_037124.1:12310649-12310949_Tasha-SNP-2.1", "NC_037124.1:12310649-12310949_Tasha-SNP-2.2"
+)
+
+# Ensure all columns exist
+hap2col_num <- reduce(columns_to_select, ensure_column, .init = hap2col_num)
+
+# Now proceed with your original operations
+hap2col_num_OTS28 <- hap2col_num %>% 
+  mutate(numcol1 = as.integer(5), numcol2 = as.integer(1)) %>%
+  select(indiv.ID, numcol1, numcol2, 
+         `NC_037124.1:12267397-12267697.1`, `NC_037124.1:12267397-12267697.2`,
+         `NC_037124.1:12270118-12270418.1`, `NC_037124.1:12270118-12270418.2`,
+         `NC_037124.1:12272852-12273152.1`, `NC_037124.1:12272852-12273152.2`,
+         `NC_037124.1:12277401-12277701_Tasha-SNP-1.1`, `NC_037124.1:12277401-12277701_Tasha-SNP-1.2`,
+         `NC_037124.1:12279142-12279478.1`, `NC_037124.1:12279142-12279478.2`,
+         `NC_037124.1:12281207-12281551.1`, `NC_037124.1:12281207-12281551.2`,
+         `NC_037124.1:12310649-12310949_Tasha-SNP-2.1`, `NC_037124.1:12310649-12310949_Tasha-SNP-2.2`
+  ) # select only OTS28/Greb1l loci
+
+write_tsv(hap2col_num_OTS28, file = hap2col_num_OTS28_output, na = '-9')

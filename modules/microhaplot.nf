@@ -74,6 +74,7 @@ process HAP2GENO {
     path "*_numgenotypes.txt", emit: numgeno
     path "*_missingdata.txt", emit: missing
     path "*_locus_indices.csv", emit: new_index
+    path "*_numgenotypes_OTS28.txt", emit: numgeno_OTS28
 
     script:
     """

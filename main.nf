@@ -28,6 +28,7 @@ include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
 include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
 include { RUN_RUBIAS } from './modules/rubias.nf'
 include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
+include { RUN_ID } from './modules/report.nf'
 
 // Define input channels
 Channel // paired
@@ -83,5 +84,6 @@ workflow {
     STRUC_PARAMS(ots28_baseline_ch, HAP2GENO.out.numgeno_OTS28)
     STRUCTURE(STRUC_PARAMS.out.structure_input, STRUC_PARAMS.out.m_params, STRUC_PARAMS.out.e_params)
     RUN_RUBIAS(HAP2GENO.out.numgeno, baseline_ch)
+    RUN_ID(STRUCTURE.out.structure_output, RUN_RUBIAS.out.mix_estimates, STRUC_PARAMS.out.structure_input)
 }
 

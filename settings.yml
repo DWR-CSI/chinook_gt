@@ -1,6 +1,6 @@
 # Input
-input: "az://nextflow/raw_data/L0001/*_L001_R{1,2}_001.fastq.gz"
-project: 'L0001'
+input: "az://nextflow/raw_data/L0002/*_L001_R{1,2}_001.fastq.gz"
+project: 'L0002'
 outdir: 'az://nextflow/results/transition'
 locus_index: 'az://nextflow/reference/transition_panel/locus_indices_latest.csv'
 reporting_groups: '4'

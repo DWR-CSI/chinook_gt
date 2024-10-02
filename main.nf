@@ -30,20 +30,20 @@ include { RUN_RUBIAS } from './modules/rubias.nf'
 include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
 include { RUN_ID } from './modules/report.nf'
 
-// Define input channels
-Channel // paired
-    .fromFilePairs(params.input, checkIfExists: true)
-    .set { ch_input_fastq_pairs }
-ch_input_fastq = Channel // all fastq files for FastQC
-    .fromPath(params.input, checkIfExists: true)
-    .collect()
-reference_ch = channel.fromPath(params.reference) // Maybe load the adapter file, vcfs, and others like this?
-adapters_ch = channel.fromPath(params.adapter_file)
-locus_index_ch = channel.fromPath(params.locus_index)
-baseline_ch = channel.fromPath(params.baseline)
-ots28_baseline_ch = channel.fromPath(params.ots28_baseline)
     
 workflow {
+    // Define input channels
+    Channel // paired
+        .fromFilePairs(params.input, checkIfExists: true)
+        .set { ch_input_fastq_pairs }
+    ch_input_fastq = Channel // all fastq files for FastQC
+        .fromPath(params.input, checkIfExists: true)
+        .collect()
+    reference_ch = channel.fromPath(params.reference) // Maybe load the adapter file, vcfs, and others like this?
+    adapters_ch = channel.fromPath(params.adapter_file)
+    locus_index_ch = channel.fromPath(params.locus_index)
+    baseline_ch = channel.fromPath(params.baseline)
+    ots28_baseline_ch = channel.fromPath(params.ots28_baseline)
     index_ch = INDEX_REFERENCE(reference_ch)
     FASTQC(ch_input_fastq)
     ch_fastq_adapters_combined = ch_input_fastq_pairs.combine(adapters_ch)

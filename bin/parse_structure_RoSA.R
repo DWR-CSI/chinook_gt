@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 # Setup --------------
 library(tidyverse)
-missing_threshold <- 74 # Percentage. Samples with more than this missing will be marked as uncertain.
 
 # Functions ------------
 
@@ -48,32 +47,17 @@ extract_ancestry_data <- function(lines) {
   return(ancestry_data)
 }
 
-RoSA_informed_runID <- function(RoSA, repunit, PofZ, n_non_miss_loci, n_miss_loci) {
+which_RoSA_informed_baseline <- function(RoSA) {
   if (RoSA == "Late") {
-    return("Fall / Late Fall")
+    return("FLF")
     # needs to continue on to use baseline that only includes Fall + Late Fall pops
   } else if (RoSA == "Early") {
-    if (n_non_miss_loci / (n_non_miss_loci + n_miss_loci) > 0.2) {
-      if ((PofZ < 0.8) | (repunit == "CV_Fall" | repunit == "CV_Late_fall")) {
-        return("Spring")
-        # needs to continue on to use baseline that includes only S+W
-      } else if (repunit == "CV_Spring") {
-        return("Spring")
-        # needs to continue on to use baseline that includes only S+W
-      } else if (repunit == "CV_Winter") {
-        return("Winter")
-        # needs to continue on to use baseline that includes only S+W
-      } else {
-        return("Error")
-      }
-    } else {
-      return("Uncertain")
-    }
-  } else if (RoSA == "Uncertain" & (n_non_miss_loci / (n_non_miss_loci + n_miss_loci) > 0.2)) {
-    return("Use GSI")
+    return("SW")
+  } else if (RoSA == "Intermediate") {
+    return("Full")
     # Does not need to continue onto another baseline
-  } else if (RoSA == "Uncertain" & (n_non_miss_loci / (n_non_miss_loci + n_miss_loci) < 0.2)) {
-    return("Uncertain")
+  } else if (RoSA == "Uncertain") {
+    return("Full")
   } else {
     return("Error")
   }
@@ -84,11 +68,10 @@ RoSA_informed_runID <- function(RoSA, repunit, PofZ, n_non_miss_loci, n_miss_loc
 args <- commandArgs(trailingOnly = TRUE)
 
 structure_output_path <- args[1]
-gsi_output_path <- args[2]
-project_name <- args[3]
-structure_input_path <- args[4]
+project_name <- args[2]
+structure_input_path <- args[3]
+missing_threshold <- args[4] * 100 # Percentage. Samples with more missing marked as uncertain.
 ots28_output_filename <- stringr::str_c(project_name, "_ots28_report.tsv")
-ots28_gsi_combined_report_output <- stringr::str_c(project_name, "_ots28_gsi_combined_run_id.txt")
 lines <- readLines(structure_output_path)
 
 
@@ -125,8 +108,9 @@ if (
 ) {
   ancestry_data <- ancestry_data %>%
     mutate(Ancestry = case_when( # Cluster 1 is early, cluster 2 is late
-      Cluster1 > Cluster2 * 5 ~ "Early",
+      Cluster1 > Cluster2 * 5 ~ "Early", # equivalent to Cluster 1 > 83% and Cluster 2 < 17%
       Cluster1 * 5 < Cluster2 ~ "Late",
+      Missing < missing_threshold ~ "Intermediate",
       TRUE ~ "Uncertain"
     ))
 } else if (refpop1_diff > 0.7 && refpop2_diff > 0.7 && refpop3_diff < -0.7 && refpop4_diff < -0.7) {
@@ -134,6 +118,7 @@ if (
     mutate(Ancestry = case_when( # Cluster 1 is late, cluster 2 is early
       Cluster1 * 5 < Cluster2 ~ "Early",
       Cluster1 > Cluster2 * 5 ~ "Late",
+      Missing < missing_threshold ~ "Intermediate",
       TRUE ~ "Uncertain"
     ))
 } else {
@@ -151,7 +136,8 @@ ancestry_data <- ancestry_data %>%
     "ots28_missing" = "Missing",
     RoSA = "Ancestry"
   ) %>%
-  select(indiv, RoSA, ots28_missing)
+  select(indiv, RoSA, ots28_missing) %>%
+  mutate(baseline = map_chr(RoSA, which_RoSA_informed_baseline))
 
 
 # Replace labels with input labels from original data because Structure truncates the labels.
@@ -165,9 +151,3 @@ if (length(original_labels) == length(ancestry_data$indiv)) {
 }
 
 write_tsv(ancestry_data, ots28_output_filename)
-
-rubias_ots28_report <- read_tsv(gsi_output_path) %>%
-  left_join(ancestry_data, by = "indiv") %>%
-  mutate(RoSA_informed_runID = pmap_chr(list(RoSA, repunit, PofZ, n_non_miss_loci, n_miss_loci), RoSA_informed_runID))
-
-write_tsv(rubias_ots28_report, ots28_gsi_combined_report_output)

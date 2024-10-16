@@ -28,7 +28,7 @@ include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
 include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
 include { RUN_RUBIAS } from './modules/rubias.nf'
 include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
-include { RUN_ID } from './modules/report.nf'
+include { ROSA_REPORT } from './modules/rosa.nf'
 
 // Functions
 
@@ -65,6 +65,7 @@ workflow {
                        .map { files -> tuple(files[0].simpleName, files) }
         .set { reference_ch }
     view(reference_ch)
+    
     adapters_ch = channel.fromPath(params.adapter_file)
     locus_index_ch = channel.fromPath(params.locus_index)
     baseline_ch = channel.fromPath(params.baseline)
@@ -134,7 +135,7 @@ workflow {
     // Run Structure and Rubias analyses
     STRUC_PARAMS(ots28_baseline_ch, HAP2GENO.out.numgeno_OTS28)
     STRUCTURE(STRUC_PARAMS.out.structure_input, STRUC_PARAMS.out.m_params, STRUC_PARAMS.out.e_params)
+    STRUCTURE_ROSA_REPORT(STRUCTURE.out.structure_output, STRUC_PARAMS.out.structure_input, params.ots28_missing_threshold)
     RUN_RUBIAS(HAP2GENO.out.numgeno, baseline_ch)
-    RUN_ID(STRUCTURE.out.structure_output, RUN_RUBIAS.out.mix_estimates, STRUC_PARAMS.out.structure_input)
 }
 

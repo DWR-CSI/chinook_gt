@@ -50,12 +50,11 @@ extract_ancestry_data <- function(lines) {
 which_RoSA_informed_baseline <- function(RoSA) {
   if (RoSA == "Late") {
     return("FLF")
-    # needs to continue on to use baseline that only includes Fall + Late Fall pops
+    # use baseline that only includes Fall + Late Fall pops
   } else if (RoSA == "Early") {
-    return("SW")
+    return("SW") # Use Spring + Winter only baseline
   } else if (RoSA == "Intermediate") {
-    return("Full")
-    # Does not need to continue onto another baseline
+    return("Full") # Use all 4 pops as baseline
   } else if (RoSA == "Uncertain") {
     return("Full")
   } else {
@@ -70,7 +69,7 @@ args <- commandArgs(trailingOnly = TRUE)
 structure_output_path <- args[1]
 project_name <- args[2]
 structure_input_path <- args[3]
-missing_threshold <- args[4] * 100 # Percentage. Samples with more missing marked as uncertain.
+missing_threshold <- as.numeric(args[4]) * 100 # Percentage. Samples with more missing marked as uncertain.
 ots28_output_filename <- stringr::str_c(project_name, "_ots28_report.tsv")
 lines <- readLines(structure_output_path)
 

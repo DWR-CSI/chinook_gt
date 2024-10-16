@@ -6,14 +6,14 @@ process STRUCTURE_ROSA_REPORT {
 
     input:
     path structure_output
-    val project
     path structure_input
+    val missing_threshold
 
     output:
     path "*_ots28_report.tsv", emit: ots28_report
 
     script:
     """
-    parse_structure_RoSA.R ${structure_output} ${params.project} ${structure_input} ${params.ots28_missing_threshold}
+    parse_structure_RoSA.R ${structure_output} ${params.project} ${structure_input} ${missing_threshold}
     """
 }

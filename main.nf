@@ -28,7 +28,7 @@ include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
 include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
 include { RUN_RUBIAS } from './modules/rubias.nf'
 include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
-include { ROSA_REPORT } from './modules/rosa.nf'
+include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
 
 // Functions
 

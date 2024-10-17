@@ -202,37 +202,50 @@ new_alleles <- new_data %>%
   anti_join(locus_index) %>%
   mutate(index = NA)
 
-# append new alleles
-new_indices <- locus_index %>%
-  rbind(new_alleles)
+new_indices_filename <- stringr::str_c(format(Sys.Date(), "%Y%m%d"), "_", project_name, "_locus_indices.csv")
+
+if (nrow(new_alleles) > 0) {
+  # New alleles found
+  # append new alleles
+  new_indices <- locus_index %>%
+    rbind(new_alleles)
 
 
-locus_list <- unique(new_alleles$locus)
-for_data <- data.frame()
-for (i in 1:length(locus_list)) {
-  l <- locus_list[i]
-  j <- locus_index %>% filter(locus == l)
-  m <- max(j$index)
-  d <- new_indices %>%
-    filter(locus == l)
-  for (n in 1:nrow(d)) {
-    d$index[n] <- ifelse(is.na(d$index[n]), max(d$index, na.rm = T) + 1, d$index[n])
+  locus_list <- unique(new_alleles$locus)
+  for_data <- data.frame()
+  for (i in 1:length(locus_list)) {
+    l <- locus_list[i]
+    j <- locus_index %>% filter(locus == l)
+    m <- max(j$index)
+    d <- new_indices %>%
+      filter(locus == l)
+    for (n in 1:nrow(d)) {
+      d$index[n] <- ifelse(is.na(d$index[n]), max(d$index, na.rm = T) + 1, d$index[n])
+    }
+    for_data <- for_data %>% rbind(d)
   }
-  for_data <- for_data %>% rbind(d)
+  new_indices <- new_indices %>%
+    filter(!locus %in% locus_list)
+  new_indices_long <- new_indices %>%
+    rbind(for_data)
+
+  # get wide locus indices
+  new_indices_wide <- new_indices_long %>%
+    pivot_wider(names_from = index, values_from = allele)
+
+  # get fish locus index
+  fish_data <- pivot_data %>%
+    mutate(locus = substr(locus, 1, nchar(locus) - 2)) %>%
+    inner_join(new_indices)
+  write_csv(new_indices_long, file = new_indices_filename, quote = "all")
+} else {
+  # No new alleles found
+  fish_data <- pivot_data %>%
+    mutate(locus = substr(locus, 1, nchar(locus) - 2)) %>%
+    inner_join(locus_index)
+  file.create(new_indices_filename)
 }
-new_indices <- new_indices %>%
-  filter(!locus %in% locus_list)
-new_indices_long <- new_indices %>%
-  rbind(for_data)
 
-# get wide locus indices
-new_indices_wide <- new_indices_long %>%
-  pivot_wider(names_from = index, values_from = allele)
-
-# get fish locus index
-fish_data <- pivot_data %>%
-  mutate(locus = substr(locus, 1, nchar(locus) - 2)) %>%
-  inner_join(new_indices)
 
 
 ########## Jeff's part for spreading the recoded genos
@@ -294,8 +307,7 @@ hap2col_num[is.na(hap2col_num)] <- as.numeric("-9") # a last tidbit of cleanup f
 
 hap2col_num_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m%d"), "_numgenotypes.txt")
 write_csv(hap2col_num, file = hap2col_num_output, na = "#N/A")
-new_indices_filename <- stringr::str_c(format(Sys.Date(), "%Y%m%d"), "_", project_name, "_locus_indices.csv")
-write_csv(new_indices_long, file = new_indices_filename, quote = "all")
+
 
 hap2col_num_OTS28_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m%d"), "_numgenotypes_OTS28.txt")
 # List of columns we want to select

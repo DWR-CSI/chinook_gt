@@ -237,7 +237,7 @@ if (nrow(new_alleles) > 0) {
   fish_data <- pivot_data %>%
     mutate(locus = substr(locus, 1, nchar(locus) - 2)) %>%
     inner_join(new_indices)
-  write_csv(new_indices_long, file = new_indices_filename, quote = "all")
+  write_csv(new_indices_long %>% mutate(index = as.character(index)), file = new_indices_filename, quote = "all")
 } else {
   # No new alleles found
   fish_data <- pivot_data %>%

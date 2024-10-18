@@ -9,7 +9,7 @@ process BWA_MEM {
     tuple val(sample_id), path(merged_reads), val(ref_name), path(ref_and_index_files)
 
     output:
-    tuple val(sample_id), val(ref_name), path("${sample_id}_aln.sam"), emit: aligned_sam
+    tuple val(sample_id), val(ref_name), path("${sample_id}_${ref_name}_aln.sam"), emit: aligned_sam
 
     script:
     def reference_fasta = ref_and_index_files.find { it.name.endsWith('.fasta') }
@@ -21,6 +21,6 @@ process BWA_MEM {
         -R "@RG\\tID:${sample_id}\\tLB:amplicon\\tPL:ILLUMINA\\tSM:${sample_id}" \
         "${reference_fasta}" \
         "${merged_reads}" \
-        > "${sample_id}_aln.sam"
+        > "${sample_id}_${ref_name}_aln.sam"
     """
 }

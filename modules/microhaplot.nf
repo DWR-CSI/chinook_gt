@@ -1,72 +1,74 @@
 process GEN_MHP_SAMPLE_SHEET {
-    tag "Generate MHP samplesheet"
+    tag "Generate MHP samplesheet: $reference"
     label 'process_xsmall'
     container 'ubuntu:latest'
 
-    publishDir "${params.outdir}/${params.project}", mode: 'copy', pattern: '*_mhp_samplesheet.tsv'
+    publishDir "${params.outdir}/${params.project}/mhp/${reference}", mode: 'copy', pattern: '*_mhp_samplesheet.tsv'
 
     input:
-    path aligned_sam_files
+    tuple val(sample_id), val(reference), path(vcf), path(aligned_sam_files)
 
     output:
-    path "${params.project}_mhp_samplesheet.tsv", emit: mhp_samplesheet
+    tuple val(reference), path("${params.project}_${reference}_mhp_samplesheet.tsv"), path(vcf), path(aligned_sam_files), emit: mhp_samplesheet
 
     script:
     """
     #!/bin/bash
-    for file in \$(ls \$aligned_sam_files); do
-        echo -e "\$file\t\${file::-8}\tNA" >> "${params.project}_mhp_samplesheet.tsv"
+    for sam_file in ${aligned_sam_files}; do
+        if [[ "\$sam_file" == *.sam ]]; then
+            base_name=\$(basename "\$sam_file" ${reference}_aln.sam)
+            echo -e "\$sam_file\t\$base_name\tNA" >> "${params.project}_${reference}_mhp_samplesheet.tsv"
+        fi
     done
-    sort -u -o "${params.project}_mhp_samplesheet.tsv" "${params.project}_mhp_samplesheet.tsv"
+    sort -u -o "${params.project}_${reference}_mhp_samplesheet.tsv" "${params.project}_${reference}_mhp_samplesheet.tsv"
     """
 }
 
 process PREP_MHP_RDS {
-    tag "Prepare Microhaplotype RDS files"
+    tag "Prepare Microhaplotype RDS files: $reference"
     label 'process_high'
     container 'docker.io/bnguyen29/r-rubias:1.0.4'
-    publishDir "${params.outdir}/${params.project}/mhp_rds", mode: 'copy'
+    publishDir "${params.outdir}/${params.project}/mhp/${reference}", mode: 'copy'
 
     input:
-    path samplesheet
-    path vcf_file
-    path sam_files
+    tuple val(reference), path(samplesheet), path(vcf_file), path(sam_files)
 
     output:
-    path "*.rds", emit: rds
+    tuple val(reference), path("*.rds"), emit: rds
 
     script:
     """
-    prep_mhp_rds.R ${samplesheet} ${vcf_file} ${params.project} ${task.cpus}
+    # Needs to take in reference info and output reference info in the RDS file
+    prep_mhp_rds.R ${samplesheet} ${vcf_file} ${params.project} ${task.cpus} ${reference}
     """
 }
 
 process GEN_HAPS {
-    tag "Generate haplotypes"
+    tag "Generate haplotypes: $reference"
     label 'process_small'
     container 'docker.io/rocker/tidyverse:4.4.1'
     publishDir "${params.outdir}/${params.project}/haplotypes", mode: 'copy'
 
     input:
-    path rds_files
+    tuple val(reference), path(rds_files)
 
     output:
-    path "*_observed_unfiltered_haplotype.csv", emit: haps
+    tuple val(reference), path("*_observed_unfiltered_haplotype.csv"), emit: haps
 
     script:
     """
-    gen_haps.R ${params.project}
+    gen_haps.R ${params.project}_${reference}
     """
 }
 
 process HAP2GENO {
-    tag "Convert haplotypes to genotypes"
+    tag "Convert haplotypes to genotypes: $reference"
     label 'process_small'
     container 'docker.io/rocker/tidyverse:4.4.1'
     publishDir "${params.outdir}/${params.project}/genotypes", mode: 'copy'
 
     input:
-    path hap_file
+    tuple val(reference), path(hap_file)
     path locindex
 
     output:
@@ -78,7 +80,7 @@ process HAP2GENO {
 
     script:
     """
-    haps2geno.R ${hap_file} ${params.project} ${locindex}
+    haps2geno.R ${hap_file} ${params.project}_${reference} ${locindex}
     """
 }
 

@@ -40,11 +40,7 @@ workflow {
             error "No reference or panel file provided. Exiting."
         } else {
             if (params.panel.toLowerCase() == "transition") { // Transition panel defaults
-                params.reference = "$projectDir/data/transition_target/transition.fasta"
-                if ((params.addtl_target == null) && params.addtl_vcf == null) {
-                    params.addtl_target = ["$projectDir/data/targets/LFAR/LFAR.fna", "$projectDir/data/targets/WRAP/WRAP.fna"]
-                    params.addtl_vcf = ["$projectDir/data/targets/LFAR/LFAR.vcf", "$projectDir/data/targets/WRAP/WRAP.vcf"]
-                }
+                params.reference = ["$projectDir/data/transition_target/transition.fasta", "$projectDir/data/targets/LFAR/LFAR.fna", "$projectDir/data/targets/WRAP/WRAP.fna"]
             }
         }
     } else {
@@ -59,12 +55,28 @@ workflow {
     ch_input_fastq = Channel // all fastq files for FastQC
         .fromPath(params.input, checkIfExists: true)
         .collect()
-    Channel // Load main reference file
-        .fromPath("${params.reference}{,.amb,.ann,.bwt,.fai,.pac,.sa}")
-                       .collect()
-                       .map { files -> tuple(files[0].simpleName, files) }
+    // Create a channel from the list of reference paths
+    Channel
+        .fromList(params.reference)
+        .flatMap { ref ->
+            // For each reference, create a list of paths for the reference and its index files
+            def extensions = ['', '.amb', '.ann', '.bwt', '.fai', '.pac', '.sa']
+            extensions.collect { ext -> file("${ref}${ext}") }
+        }
+        .collect()
+        .map { files -> 
+            // Group files by their base name (without extension)
+            files.groupBy { it.simpleName }
+        }
+        .flatMap { refMap -> 
+            // Create a tuple for each reference
+            refMap.collect { refName, refFiles ->
+                tuple(refName, refFiles)
+            }
+        }
         .set { reference_ch }
-    view(reference_ch)
+
+    //reference_ch.view { "Debug: Reference files: $it" }
     
     adapters_ch = channel.fromPath(params.adapter_file)
     locus_index_ch = channel.fromPath(params.locus_index)
@@ -91,30 +103,23 @@ workflow {
     // Run the analysis
     ANALYZE_IDXSTATS(idxstats_main)
 
-    branched_sams = BWA_MEM.out.aligned_sam
-        .branch { 
-            main: it[1] =~ /transition|full/
-            other: true
+    BWA_MEM.out.aligned_sam
+        .groupTuple(by: 1)
+        .map { sample_id, ref_name, sam_files ->
+            // Search for VCF file in data/VCFs directory of projectDir
+            // VCF file should have the same basename as the reference files.
+            def vcfFile = file("${projectDir}/data/VCFs/${ref_name}.vcf")
+            if (!vcfFile.exists()) {
+                error "VCF file not found for reference: ${ref_name}. Place a file named ${ref_name}.vcf in the data/VCFs of project directory."
             }
+            tuple(sample_id, ref_name, vcfFile, sam_files)
+        }
+        .set { grouped_sam_files }
+    //grouped_sam_files.view { println "Debug: Grouped SAM files: $it" }
 
-    GEN_MHP_SAMPLE_SHEET(branched_sams.main.map { it -> it[2] }.collect())
+    // Now you can use grouped_sam_files in your next process
+    GEN_MHP_SAMPLE_SHEET(grouped_sam_files)
 
-    // Run additional marker sets
-    /*
-    if (params.addtl_target && params.addtl_vcf) {
-        addtl_vcf = Channel.fromPath(params.addtl_vcf, checkIfExists: true)
-        Channel
-            .fromPath(params.addtl_target, checkIfExists: true)
-            .merge(addtl_vcf)
-            .set { addtl_target_vcf }
-        bwa_addtl_input = FLASH2.out.merged.combine(addtl_target_vcf)
-    } else {
-        addtl_target_vcf = Channel.empty()
-    }
-    */
-    
-
-    
     // Collect all QC files
     ch_multiqc_files = Channel.empty()
     ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.fastqc_results)
@@ -126,10 +131,14 @@ workflow {
     MULTIQC(ch_multiqc_files.collect())
 
     // Run the microhaplotype analysis
-    vcf_file_ch = Channel.fromPath(params.baseline_vcf)
-    PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet, vcf_file_ch, branched_sams.main.map { it -> it[2] }.collect())
+    PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet)
     GEN_HAPS(PREP_MHP_RDS.out.rds)
-    HAP2GENO(GEN_HAPS.out.haps, locus_index_ch)
+    panel_branched_haps = GEN_HAPS.out.haps
+        .branch { 
+            main: it[0] =~ /transition|full/
+            other: true
+            }
+    HAP2GENO(panel_branched_haps.main, locus_index_ch)
     CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
 
     // Run Structure and Rubias analyses

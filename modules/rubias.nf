@@ -5,15 +5,17 @@ process RUN_RUBIAS {
     publishDir "${params.outdir}/${params.project}/rubias", mode: 'copy'
 
     input:
+    path ots28_report
     path unknowns
     path baseline
 
     output:
     path "*_matchy_pairs.tsv", emit: mpairs
-    path "*_mix_estimates.tsv", emit: mix_estimates
+    path "*_full_mix_estimates.tsv", emit: full_mix_estimates
+    path "*_summary.tsv", emit: summary
 
     script:
     """
-    rubias.R $unknowns $baseline ${params.project} ${params.reporting_groups} ${params.rubias_show_missing_data}
+    rubias.R $unknowns $baseline ${params.project} ${params.reporting_groups} ${params.rubias_show_missing_data} ${ots28_report}
     """
 }

@@ -169,3 +169,71 @@ all_full_mix_results <- all_full_mix_est$indiv_posteriors %>%
   arrange(indiv, collection, repunit, PofZ)
 
 write_tsv(all_full_mix_results, file = stringr::str_c(project_name, "_full_mix_estimates.tsv"))
+
+mix_results <- combined_results %>%
+  group_by(indiv, mixture_collection) %>%
+  mutate(
+    total_loci = n_miss_loci + n_non_miss_loci,
+    fraction_missing = n_miss_loci / total_loci
+  ) %>%
+  filter(PofZ == max(PofZ)) %>%
+  arrange(indiv, collection, repunit, PofZ) %>%
+  mutate(
+    final_call =
+      case_when(
+        PofZ < PofZ_threshold ~ "Ambiguous",
+        fraction_missing < gsi_missing_threshold ~ repunit,
+        TRUE ~ "Missing Data"
+      )
+  )
+
+indivs_too_much_missing_data <- mix_results %>%
+  mutate(total_loci = n_miss_loci + n_non_miss_loci) %>% # calculate total number of loci
+  filter(n_miss_loci / total_loci > gsi_missing_threshold) %>% # filter for individuals with more than 70% missing data
+  pull(indiv) # get the indivs with too much missing data
+
+
+
+
+### export all the PofZ for each repunit
+
+mix_results_long <- combined_results[, c(2:3, 5)]
+final_calls <- mix_results %>%
+  ungroup() %>%
+  select(indiv, repunit, n_non_miss_loci, n_miss_loci, total_loci, fraction_missing, final_call)
+
+mix_results_wide <- mix_results_long %>%
+  spread(repunit, PofZ) %>%
+  left_join(ots28_info, by = "indiv") %>% # add in the OTS28 info
+  left_join(mix_results %>% ungroup() %>% select(indiv, fraction_missing, final_call), by = "indiv") %>% # add in the final calls
+  mutate(across(
+    matches("Spring|Winter|Fall|Late"),
+    ~ replace_na(., 0)
+  )) %>% # Replace NA with 0
+  mutate(across(
+    matches("Spring|Winter|Fall|Late"),
+    ~ if_else(final_call == "Missing Data", NA_real_, .)
+  )) %>% # Replace PofZ with NA if final call is "Missing Data"
+  mutate(across(
+    matches("Spring|Winter|Fall|Late"),
+    ~ round(., digits = 2)
+  )) %>% # Round to 2 decimal places
+  mutate(
+    GSI_perc_missing = fraction_missing * 100
+  ) %>%
+  select(
+    SampleID = indiv,
+    RoSA,
+    RoSA_perc_missing = ots28_missing,
+    GSI_baseline = baseline,
+    GSI_perc_missing,
+    CV_Fall,
+    CV_Late_fall,
+    CV_Spring,
+    CV_Winter,
+    final_call
+  ) # reorder columns
+write_tsv(
+  mix_results_wide,
+  file = stringr::str_c(project_name, "_summary.tsv")
+)

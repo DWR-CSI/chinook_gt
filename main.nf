@@ -49,8 +49,8 @@ def resolveReferences(params) {
             case 'transition':
                 reference_files = [
                     "$projectDir/data/targets/transition/transition.fasta",
-                    //"$projectDir/data/targets/LFAR/LFAR.fna", // Commented out. Not used in DWR primers?
-                    "$projectDir/data/targets/WRAP/WRAP.fna"
+                    //"$projectDir/data/targets/LFAR/LFAR.fasta", // Commented out. Not used in DWR primers?
+                    "$projectDir/data/targets/WRAP/WRAP.fasta"
                 ]
                 log.info "Using transition panel references"
                 break

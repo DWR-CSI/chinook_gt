@@ -2,7 +2,7 @@ process STRUCTURE_ROSA_REPORT {
     tag "Synthesizing run IDs"
     container 'docker.io/bnguyen29/r-rubias:1.0.4'
     label 'process_high'
-    publishDir "${params.outdir}/${params.project}/report", mode: 'copy'
+    publishDir "${params.outdir}/${params.project}/rosa", mode: 'copy'
 
     input:
     path structure_output

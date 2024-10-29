@@ -13,6 +13,28 @@ all_na_cols <- function(df) {
     pull(key)
 }
 
+fix_missing_loci <- function(mix_est) {
+  # Get unique loci values and names
+  if (is.matrix(mix_est$indiv_posteriors$missing_loci)) {
+    # For each repunit/collection combination, create a single row with list of missing loci
+    fixed_posteriors <- mix_est$indiv_posteriors %>%
+      group_by(repunit, collection) %>%
+      slice(1) %>% # Take just the first row for each repunit/collection combo
+      ungroup()
+
+    # Convert the missing_loci column to a list
+    fixed_posteriors$missing_loci <- list(
+      structure(mix_est$indiv_posteriors$missing_loci[, 1],
+        names = rownames(mix_est$indiv_posteriors$missing_loci)
+      )
+    )
+
+    # Replace the indiv_posteriors in the original object
+    mix_est$indiv_posteriors <- fixed_posteriors
+  }
+  return(mix_est)
+}
+
 # Get command-line arguments passed by Nextflow
 args <- commandArgs(trailingOnly = TRUE)
 unks <- read_csv(args[1]) %>%
@@ -86,7 +108,19 @@ matchy_pairs_out <- matchy_pairs %>%
 write_tsv(matchy_pairs_out, file = stringr::str_c(project_name, "_matchy_pairs.tsv"))
 
 # Estimate mixtures --------------------
-combined_results <- tibble()
+combined_results <- tibble(
+  mixture_collection = character(),
+  indiv = character(),
+  repunit = character(),
+  collection = character(),
+  PofZ = double(),
+  log_likelihood = double(),
+  z_score = double(),
+  n_non_miss_loci = integer(),
+  n_miss_loci = integer(),
+  missing_loci = list()
+)
+
 if (any(ots28_info$baseline == "SW")) {
   SW_baseline <- ref_match %>%
     filter(
@@ -108,7 +142,9 @@ if (any(ots28_info$baseline == "SW")) {
     gen_start_col = 5
   )
 
-
+  if (nrow(SW_unk_match) == 1) {
+    SW_mix_est <- fix_missing_loci(SW_mix_est)
+  }
   combined_results <- bind_rows(combined_results, SW_mix_est$indiv_posteriors)
 }
 
@@ -134,6 +170,9 @@ if (any(ots28_info$baseline == "FLF")) {
     mixture = FLF_unk_match,
     gen_start_col = 5
   )
+  if (nrow(FLF_unk_match) == 1) {
+    FLF_mix_est <- fix_missing_loci(FLF_mix_est)
+  }
   combined_results <- bind_rows(combined_results, FLF_mix_est$indiv_posteriors)
 }
 
@@ -153,6 +192,9 @@ if (any(ots28_info$baseline == "Full")) {
     mixture = full_unk_match,
     gen_start_col = 5
   )
+  if (nrow(full_unk_match) == 1) {
+    full_mix_est <- fix_missing_loci(full_mix_est)
+  }
   combined_results <- bind_rows(combined_results, full_mix_est$indiv_posteriors)
 }
 
@@ -227,10 +269,10 @@ mix_results_wide <- mix_results_long %>%
     RoSA_perc_missing = ots28_missing,
     GSI_baseline = baseline,
     GSI_perc_missing,
-    CV_Fall,
-    CV_Late_fall,
-    CV_Spring,
-    CV_Winter,
+    Fall = CV_Fall,
+    Late_fall = CV_Late_fall,
+    Spring = CV_Spring,
+    Winter = CV_Winter,
     final_call
   ) # reorder columns
 write_tsv(

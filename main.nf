@@ -18,7 +18,7 @@ nextflow.enable.dsl = 2
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
-include { TRIMMOMATIC } from './modules/trimmomatic'
+include { TRIMMOMATIC; TRIMMOMATIC_SINGLE } from './modules/trimmomatic'
 include { FLASH2 } from './modules/flash2'
 include { BWA_MEM } from './modules/bwa_mem'
 include { SAMTOOLS } from './modules/samtools'
@@ -136,23 +136,71 @@ workflow {
         .set { reference_ch }
     
     // Define input channels
-    Channel
-        .fromFilePairs(params.input, checkIfExists: true)
-        .set { ch_input_fastq_pairs }
-        
-    ch_input_fastq = Channel
-        .fromPath(params.input, checkIfExists: true)
-        .collect()
-    
     adapters_ch = channel.fromPath(params.adapter_file)
     locus_index_ch = channel.fromPath(params.locus_index)
     baseline_ch = channel.fromPath(params.baseline)
     ots28_baseline_ch = channel.fromPath(params.ots28_baseline)
-    FASTQC(ch_input_fastq)
-    ch_fastq_adapters_combined = ch_input_fastq_pairs.combine(adapters_ch)
-    TRIMMOMATIC(ch_fastq_adapters_combined, params.trim_params)
+        // Define input channels with automatic read type detection
+    if (params.input_format == 'paired') {
+        Channel
+            .fromFilePairs(params.input, checkIfExists: true)
+            .map { id, reads -> tuple(id, 'paired', reads) }
+            .set { ch_input_reads }
+    } else if (params.input_format == 'single') {
+        Channel
+            .fromPath(params.input, checkIfExists: true)
+            .map { file -> tuple(file.simpleName, 'single', file) }
+            .set { ch_input_reads }
+    } else {
+        // Auto-detect format based on file pattern matching
+        Channel
+            .fromFilePairs(params.input, checkIfExists: true, size: -1)
+            .map { id, reads -> 
+                def readType = reads.size() > 1 ? 'paired' : 'single'
+                tuple(id, readType, reads)
+            }
+            .set { ch_input_reads }
+    }
+        
+    ch_input_fastq = Channel
+        .fromPath(params.input, checkIfExists: true)
+        .collect()
+
+        // Branch workflow based on read type
+    ch_input_reads
+        .branch {
+            paired: it[1] == 'paired'
+            single: it[1] == 'single'
+        }
+        .set { ch_reads_branched }
+
+    // Process paired-end reads
+    ch_reads_branched.paired
+        .combine(adapters_ch)
+        .set { ch_paired_adapters }
+
+
+    
+    FASTQC(ch_input_fastq) // FASTQC all input files
+    TRIMMOMATIC(ch_paired_adapters, params.trim_params)
     FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.max_overlap)
-    bwa_input = FLASH2.out.merged.combine(reference_ch)
+    
+    // Process single-end reads
+    ch_reads_branched.single
+        .combine(adapters_ch)
+        .set { ch_single_adapters }
+    
+    TRIMMOMATIC_SINGLE(ch_single_adapters, params.trim_params)
+
+    // Merge processed reads for downstream analysis
+    ch_processed_reads = Channel.empty()
+    ch_processed_reads = ch_processed_reads.mix(
+        FLASH2.out.merged,
+        TRIMMOMATIC_SINGLE.out.trimmed
+    )
+    
+
+    bwa_input = ch_processed_reads.combine(reference_ch)
     BWA_MEM(bwa_input)
     SAMTOOLS(BWA_MEM.out.aligned_sam)
     // Collect all idxstats files

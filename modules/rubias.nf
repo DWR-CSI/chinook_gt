@@ -8,6 +8,7 @@ process RUN_RUBIAS {
     path ots28_report
     path unknowns
     path baseline
+    val panel
 
     output:
     path "*_matchy_pairs.tsv", emit: mpairs
@@ -16,6 +17,6 @@ process RUN_RUBIAS {
 
     script:
     """
-    rubias.R $unknowns $baseline ${params.project} ${params.reporting_groups} ${params.rubias_show_missing_data} ${ots28_report}
+    rubias.R $unknowns $baseline ${params.project} ${params.reporting_groups} ${params.rubias_show_missing_data} ${ots28_report} ${panel}
     """
 }

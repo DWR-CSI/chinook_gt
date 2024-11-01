@@ -55,9 +55,10 @@ if (reporting_groups != 2 && reporting_groups != 4) {
 
 show_missing_data <- as.logical(args[5])
 ots28_info_file <- args[6]
+panel_type <- as.character(args[7])
 
 ots28_missing_threshold <- 0.5 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain
-gsi_missing_threshold <- 0.6 # If less than this much GSI data is missing, consider GSI data invalid
+gsi_missing_threshold <- 0.6 # If more than this much GSI data is missing, consider GSI data invalid
 PofZ_threshold <- 0.7 # If the maximum PofZ is less than this, consider the result ambiguous
 # Parse OTS28 info file ----------------
 ots28_info <- read_tsv(ots28_info_file) %>%
@@ -121,83 +122,6 @@ combined_results <- tibble(
   missing_loci = list()
 )
 
-if (any(ots28_info$baseline == "SW")) {
-  SW_baseline <- ref_match %>%
-    filter(
-      str_detect(repunit, "Spring") | str_detect(repunit, "Winter")
-    )
-  SW_unks <- ots28_info %>%
-    filter(baseline == "SW") %>%
-    pull(indiv)
-  SW_unk_match <- unk_match %>%
-    filter(indiv %in% SW_unks)
-  SW_na_cols <- intersect(all_na_cols(SW_unk_match), all_na_cols(SW_baseline))
-  SW_unk_match <- SW_unk_match %>%
-    select(-any_of(SW_na_cols))
-  SW_baseline <- SW_baseline %>%
-    select(-any_of(SW_na_cols))
-  SW_mix_est <- infer_mixture(
-    reference = SW_baseline,
-    mixture = SW_unk_match,
-    gen_start_col = 5
-  )
-
-  if (nrow(SW_unk_match) == 1) {
-    SW_mix_est <- fix_missing_loci(SW_mix_est)
-  }
-  combined_results <- bind_rows(combined_results, SW_mix_est$indiv_posteriors)
-}
-
-if (any(ots28_info$baseline == "FLF")) {
-  FLF_baseline <- ref_match %>%
-    filter(
-      str_detect(repunit, "Fall") | str_detect(repunit, "Late")
-    )
-  FLF_unks <- ots28_info %>%
-    filter(baseline == "FLF") %>%
-    pull(indiv)
-  FLF_unk_match <- unk_match %>%
-    filter(indiv %in% FLF_unks)
-  # Return column names where all values are NA
-  FLF_na_cols <- intersect(all_na_cols(FLF_unk_match), all_na_cols(FLF_baseline))
-  FLF_unk_match <- FLF_unk_match %>%
-    select(-any_of(FLF_na_cols))
-  FLF_baseline <- FLF_baseline %>%
-    select(-any_of(FLF_na_cols))
-
-  FLF_mix_est <- infer_mixture(
-    reference = FLF_baseline,
-    mixture = FLF_unk_match,
-    gen_start_col = 5
-  )
-  if (nrow(FLF_unk_match) == 1) {
-    FLF_mix_est <- fix_missing_loci(FLF_mix_est)
-  }
-  combined_results <- bind_rows(combined_results, FLF_mix_est$indiv_posteriors)
-}
-
-if (any(ots28_info$baseline == "Full")) {
-  full_unks <- ots28_info %>%
-    filter(baseline == "Full") %>%
-    pull(indiv)
-  full_unk_match <- unk_match %>%
-    filter(indiv %in% full_unks)
-  full_na_cols <- intersect(all_na_cols(full_unk_match), all_na_cols(ref_match))
-  full_unk_match <- full_unk_match %>%
-    select(-any_of(full_na_cols))
-  full_ref_match <- ref_match %>%
-    select(-any_of(full_na_cols))
-  full_mix_est <- infer_mixture(
-    reference = full_ref_match,
-    mixture = full_unk_match,
-    gen_start_col = 5
-  )
-  if (nrow(full_unk_match) == 1) {
-    full_mix_est <- fix_missing_loci(full_mix_est)
-  }
-  combined_results <- bind_rows(combined_results, full_mix_est$indiv_posteriors)
-}
-
 # For troubleshooting only, Full baseline is used here on all samples
 all_full_mix_est <- infer_mixture(
   reference = ref_match,
@@ -211,6 +135,109 @@ all_full_mix_results <- all_full_mix_est$indiv_posteriors %>%
   arrange(indiv, collection, repunit, PofZ)
 
 write_tsv(all_full_mix_results, file = stringr::str_c(project_name, "_full_mix_estimates.tsv"))
+
+if (panel_type == "transition") {
+  if (any(ots28_info$baseline == "SW")) {
+    SW_baseline <- ref_match %>%
+      filter(
+        str_detect(repunit, "Spring") | str_detect(repunit, "Winter")
+      )
+    SW_unks <- ots28_info %>%
+      filter(baseline == "SW") %>%
+      pull(indiv)
+    SW_unk_match <- unk_match %>%
+      filter(indiv %in% SW_unks)
+    SW_na_cols <- intersect(all_na_cols(SW_unk_match), all_na_cols(SW_baseline))
+    SW_unk_match <- SW_unk_match %>%
+      select(-any_of(SW_na_cols))
+    SW_baseline <- SW_baseline %>%
+      select(-any_of(SW_na_cols))
+    SW_mix_est <- infer_mixture(
+      reference = SW_baseline,
+      mixture = SW_unk_match,
+      gen_start_col = 5
+    )
+
+    if (nrow(SW_unk_match) == 1) {
+      SW_mix_est <- fix_missing_loci(SW_mix_est)
+    }
+    combined_results <- bind_rows(combined_results, SW_mix_est$indiv_posteriors)
+  }
+
+  if (any(ots28_info$baseline == "FLF")) {
+    FLF_baseline <- ref_match %>%
+      filter(
+        str_detect(repunit, "Fall") | str_detect(repunit, "Late")
+      )
+    FLF_unks <- ots28_info %>%
+      filter(baseline == "FLF") %>%
+      pull(indiv)
+    FLF_unk_match <- unk_match %>%
+      filter(indiv %in% FLF_unks)
+    # Return column names where all values are NA
+    FLF_na_cols <- intersect(all_na_cols(FLF_unk_match), all_na_cols(FLF_baseline))
+    FLF_unk_match <- FLF_unk_match %>%
+      select(-any_of(FLF_na_cols))
+    FLF_baseline <- FLF_baseline %>%
+      select(-any_of(FLF_na_cols))
+
+    FLF_mix_est <- infer_mixture(
+      reference = FLF_baseline,
+      mixture = FLF_unk_match,
+      gen_start_col = 5
+    )
+    if (nrow(FLF_unk_match) == 1) {
+      FLF_mix_est <- fix_missing_loci(FLF_mix_est)
+    }
+    combined_results <- bind_rows(combined_results, FLF_mix_est$indiv_posteriors)
+  }
+
+  if (any(ots28_info$baseline == "Full")) {
+    full_unks <- ots28_info %>%
+      filter(baseline == "Full") %>%
+      pull(indiv)
+    full_unk_match <- unk_match %>%
+      filter(indiv %in% full_unks)
+    full_na_cols <- intersect(all_na_cols(full_unk_match), all_na_cols(ref_match))
+    full_unk_match <- full_unk_match %>%
+      select(-any_of(full_na_cols))
+    full_ref_match <- ref_match %>%
+      select(-any_of(full_na_cols))
+    full_mix_est <- infer_mixture(
+      reference = full_ref_match,
+      mixture = full_unk_match,
+      gen_start_col = 5
+    )
+    if (nrow(full_unk_match) == 1) {
+      full_mix_est <- fix_missing_loci(full_mix_est)
+    }
+    combined_results <- bind_rows(combined_results, full_mix_est$indiv_posteriors)
+  }
+} else if (panel_type == "full") {
+  if (any(ots28_info$baseline == "Full")) {
+    full_unks <- ots28_info %>%
+      filter(baseline == "Full") %>%
+      pull(indiv)
+    full_unk_match <- unk_match %>%
+      filter(indiv %in% full_unks)
+    full_na_cols <- intersect(all_na_cols(full_unk_match), all_na_cols(ref_match))
+    full_unk_match <- full_unk_match %>%
+      select(-any_of(full_na_cols))
+    full_ref_match <- ref_match %>%
+      select(-any_of(full_na_cols))
+    full_mix_est <- infer_mixture(
+      reference = full_ref_match,
+      mixture = full_unk_match,
+      gen_start_col = 5
+    )
+    if (nrow(full_unk_match) == 1) {
+      full_mix_est <- fix_missing_loci(full_mix_est)
+    }
+    combined_results <- bind_rows(combined_results, full_mix_est$indiv_posteriors)
+  }
+} else {
+  stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'transition' or 'full'."))
+}
 
 mix_results <- combined_results %>%
   group_by(indiv, mixture_collection) %>%

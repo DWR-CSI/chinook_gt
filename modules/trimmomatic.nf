@@ -6,7 +6,7 @@ process TRIMMOMATIC {
     publishDir "${params.outdir}/${params.project}/trimmed", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(reads), path(adapter_file)
+    tuple val(sample_id), val(type), path(reads), path(adapter_file)
     val(trim_params)
 
     output:
@@ -29,6 +29,36 @@ process TRIMMOMATIC {
         $input_1 $input_2 \
         $output_paired_1 $output_unpaired_1 \
         $output_paired_2 $output_unpaired_2 \
+        $adapter_param \
+        $trim_params \
+        2> ${sample_id}.trimmomatic.log
+    """
+}
+
+process TRIMMOMATIC_SINGLE {
+    tag "Trimmomatic on ${sample_id}"
+    label 'process_small'
+    container 'quay.io/biocontainers/trimmomatic:0.39--hdfd78af_2'
+
+    publishDir "${params.outdir}/${params.project}/trimmed", mode: 'copy'
+
+    input:
+    tuple val(sample_id), val(type), path(reads), path(adapter_file)
+    val(trim_params)
+
+    output:
+    tuple val(sample_id), path("*.fastq.gz"), emit: trimmed
+
+    path "*.trimmomatic.log", emit: log
+
+    script:
+    def adapter_param = adapter_file ? "ILLUMINACLIP:${adapter_file}:2:30:10" : ''
+    """
+    trimmomatic SE \
+        -threads ${task.cpus} \
+        -phred33 \
+        ${reads} \
+        ${sample_id}_trimmed.fastq.gz \
         $adapter_param \
         $trim_params \
         2> ${sample_id}.trimmomatic.log

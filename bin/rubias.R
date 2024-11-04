@@ -37,7 +37,7 @@ fix_missing_loci <- function(mix_est) {
 
 # Get command-line arguments passed by Nextflow
 args <- commandArgs(trailingOnly = TRUE)
-unks <- read_csv(args[1]) %>%
+unks_numgeno <- read_csv(args[1]) %>%
   mutate_if(is.double, as.integer) %>%
   rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%
   rename_at(vars(ends_with(".2")), ~ str_replace(., "\\.2$", ".1")) %>%
@@ -56,19 +56,33 @@ if (reporting_groups != 2 && reporting_groups != 4) {
 show_missing_data <- as.logical(args[5])
 ots28_info_file <- args[6]
 panel_type <- as.character(args[7])
+unks_alphageno <- args[8] %>%
+  read_tsv() %>%
+  mutate_if(is.factor, as.character) %>%
+  rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%
+  rename_at(vars(ends_with(".2")), ~ str_replace(., "\\.2$", ".1")) %>%
+  mutate(sample_type = "mixture", repunit = NA) %>%
+  rename(collection = group, indiv = indiv.ID) %>%
+  rename_all(~ gsub("-", ".", .))
 
 ots28_missing_threshold <- 0.5 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain
 gsi_missing_threshold <- 0.6 # If more than this much GSI data is missing, consider GSI data invalid
 PofZ_threshold <- 0.7 # If the maximum PofZ is less than this, consider the result ambiguous
 # Parse OTS28 info file ----------------
+
+
+
+if (panel_type == "transition") {
+  unks <- unks_numgeno
+} else if (panel_type == "full") {
+  unks <- unks_alphageno
+} else {
+  stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'transition' or 'full'."))
+}
+
 ots28_info <- read_tsv(ots28_info_file) %>%
-  mutate(RoSA = if_else(RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold, "Intermediate", RoSA))
-
-# Parse OTS28 info file ----------------
-ots28_info <- read_tsv(ots28_info_file) %>%
-  mutate(RoSA = if_else(RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold, "Intermediate", RoSA))
-
-
+  mutate(RoSA = if_else(RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold, "Intermediate", RoSA)) %>%
+  filter(indiv %in% unks$indiv)
 # Combine unknowns and reference baseline ----------------
 unk_match <- unks %>%
   select(any_of(names(ref_baseline))) # Keep only columns (loci) that are in ref_baseline
@@ -77,7 +91,7 @@ if (show_missing_data == TRUE) {
   # Add blank/NA data for columns that are in ref_baseline but missing from unk_match
   missing_cols <- setdiff(names(ref_baseline), names(unk_match))
   for (col in missing_cols) {
-    unk_match[[col]] <- as.integer(-9) # -9 is the missing data code
+    unk_match[[col]] <- "ND" # -9 or "ND" is the missing data code
   }
   ref_match <- ref_baseline
   unk_match <- unk_match %>%
@@ -88,11 +102,26 @@ if (show_missing_data == TRUE) {
     select(any_of(names(unk_match)))
 }
 
-chinook_all <- bind_rows(unk_match, ref_match) %>%
-  filter(collection != "Coho") %>%
-  mutate(across(everything(), ~ if_else(. == -9, NA, .)))
 unk_match <- unk_match %>%
-  mutate(across(everything(), ~ if_else(. == -9, NA, .)))
+  mutate(across(everything(), ~ if_else(. == "ND", NA, .))) %>%
+  mutate(
+    collection = case_when(
+      is.na(collection) ~ "ND",
+      TRUE ~ collection
+    )
+  )
+for (col in seq(5, ncol(unk_match), 2)) {
+  col1 <- col
+  col2 <- col + 1
+  missing1 <- is.na(unk_match[, col1])
+  missing2 <- is.na(unk_match[, col2])
+  both_should_be_missing <- missing1 | missing2
+  unk_match[both_should_be_missing, col1] <- NA
+  unk_match[both_should_be_missing, col2] <- NA
+}
+
+chinook_all <- bind_rows(unk_match, ref_match) %>%
+  filter(collection != "Coho")
 
 
 # Matching --------------------
@@ -224,7 +253,14 @@ if (panel_type == "transition") {
     full_unk_match <- full_unk_match %>%
       select(-any_of(full_na_cols))
     full_ref_match <- ref_match %>%
-      select(-any_of(full_na_cols))
+      select(-any_of(full_na_cols)) %>%
+      mutate(
+        repunit = case_when(
+          collection == "ColemanLF" ~ "latefall",
+          TRUE ~ repunit
+        )
+      ) %>%
+      mutate(collection = repunit)
     full_mix_est <- infer_mixture(
       reference = full_ref_match,
       mixture = full_unk_match,
@@ -234,6 +270,97 @@ if (panel_type == "transition") {
       full_mix_est <- fix_missing_loci(full_mix_est)
     }
     combined_results <- bind_rows(combined_results, full_mix_est$indiv_posteriors)
+  }
+  if (any(ots28_info$baseline == "SW")) {
+    SW_baseline <- ref_match %>%
+      filter(
+        collection %in% c("ButteSp", "FRHsp", "MillDeerSp", "SacWin")
+      ) %>%
+      mutate(
+        repunit = case_when(
+          collection == "FRHsp" ~ "spring",
+          repunit == "winter" ~ "winter",
+          TRUE ~ repunit
+        ),
+        collection = case_when(
+          collection == "SacWin" ~ "SacWin",
+          TRUE ~ repunit
+        )
+      )
+    SW_unks <- ots28_info %>%
+      filter(baseline == "SW") %>%
+      pull(indiv)
+    SW_unk_match <- unk_match %>%
+      filter(indiv %in% SW_unks)
+    SW_na_cols <- intersect(all_na_cols(SW_unk_match), all_na_cols(SW_baseline))
+    SW_unk_match <- SW_unk_match %>%
+      select(-any_of(SW_na_cols))
+    SW_baseline <- SW_baseline %>%
+      select(-any_of(SW_na_cols))
+    SW_mix_est <- infer_mixture(
+      reference = SW_baseline,
+      mixture = SW_unk_match,
+      gen_start_col = 5
+    )
+
+    if (nrow(SW_unk_match) == 1) {
+      SW_mix_est <- fix_missing_loci(SW_mix_est)
+    }
+    combined_results <- bind_rows(combined_results, SW_mix_est$indiv_posteriors)
+  }
+  if (any(ots28_info$baseline == "FLF")) {
+    FLF_baseline <- ref_match %>%
+      filter(
+        collection %in% c(
+          "ButteFall",
+          "ColemanLF",
+          "FRHfall",
+          "FRHsp",
+          "MillDeerFall",
+          "SanJoaquinFall"
+        )
+      ) %>%
+      mutate(
+        repunit = case_when(
+          collection == "ColemanLF" ~ "latefall",
+          TRUE ~ repunit
+        ) %>%
+          mutate(
+            collection = case_when(
+              collection == "ColemanLF" ~ "latefall",
+              collection %in% c(
+                "ButteFall",
+                "ColemanLF",
+                "FRHfall",
+                "FRHsp",
+                "MillDeerFall",
+                "SanJoaquinFall"
+              ) ~ "fall",
+              TRUE ~ repunit
+            )
+          )
+      )
+    FLF_unks <- ots28_info %>%
+      filter(baseline == "FLF") %>%
+      pull(indiv)
+    FLF_unk_match <- unk_match %>%
+      filter(indiv %in% FLF_unks)
+    # Return column names where all values are NA
+    FLF_na_cols <- intersect(all_na_cols(FLF_unk_match), all_na_cols(FLF_baseline))
+    FLF_unk_match <- FLF_unk_match %>%
+      select(-any_of(FLF_na_cols))
+    FLF_baseline <- FLF_baseline %>%
+      select(-any_of(FLF_na_cols))
+
+    FLF_mix_est <- infer_mixture(
+      reference = FLF_baseline,
+      mixture = FLF_unk_match,
+      gen_start_col = 5
+    )
+    if (nrow(FLF_unk_match) == 1) {
+      FLF_mix_est <- fix_missing_loci(FLF_mix_est)
+    }
+    combined_results <- bind_rows(combined_results, FLF_mix_est$indiv_posteriors)
   }
 } else {
   stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'transition' or 'full'."))
@@ -273,18 +400,19 @@ final_calls <- mix_results %>%
 
 mix_results_wide <- mix_results_long %>%
   spread(repunit, PofZ) %>%
+  group_by(indiv) %>%
   left_join(ots28_info, by = "indiv") %>% # add in the OTS28 info
   left_join(mix_results %>% ungroup() %>% select(indiv, fraction_missing, final_call), by = "indiv") %>% # add in the final calls
   mutate(across(
-    matches("Spring|Winter|Fall|Late"),
+    matches("spring|winter|fall|late"),
     ~ replace_na(., 0)
   )) %>% # Replace NA with 0
   mutate(across(
-    matches("Spring|Winter|Fall|Late"),
+    matches("spring|winter|fall|late"),
     ~ if_else(final_call == "Missing Data", NA_real_, .)
   )) %>% # Replace PofZ with NA if final call is "Missing Data"
   mutate(across(
-    matches("Spring|Winter|Fall|Late"),
+    matches("spring|winter|fall|late"),
     ~ round(., digits = 2)
   )) %>% # Round to 2 decimal places
   mutate(
@@ -296,10 +424,10 @@ mix_results_wide <- mix_results_long %>%
     RoSA_perc_missing = ots28_missing,
     GSI_baseline = baseline,
     GSI_perc_missing,
-    Fall = CV_Fall,
-    Late_fall = CV_Late_fall,
-    Spring = CV_Spring,
-    Winter = CV_Winter,
+    Fall = fall,
+    Late_fall = latefall,
+    Spring = spring,
+    Winter = winter,
     final_call
   ) # reorder columns
 write_tsv(

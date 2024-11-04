@@ -56,8 +56,8 @@ def resolveReferences(params) {
                 break
             case 'full':
                 reference_files = [
-                    "$projectDir/data/targets/full/full.fna",
-                    "$projectDir/data/targets/full_VGLL3Six6LFARWRAP/VGLL3Six6LFARWRAP.fna"
+                    "$projectDir/data/targets/full/full.fna"//,
+                    //"$projectDir/data/targets/full_VGLL3Six6LFARWRAP/VGLL3Six6LFARWRAP.fna"
                 ]
                 log.info "Using full panel reference"
                 break
@@ -137,10 +137,36 @@ workflow {
     
     // Define input channels
     adapters_ch = channel.fromPath(params.adapter_file)
-    locus_index_ch = channel.fromPath(params.locus_index)
-    baseline_ch = channel.fromPath(params.baseline)
-    ots28_baseline_ch = channel.fromPath(params.ots28_baseline)
-        // Define input channels with automatic read type detection
+
+    def locus_index_file
+    if (params.containsKey('locus_index')) {
+        locus_index_file = params.locus_index
+    } else {
+        locus_index_file = "${projectDir}/data/indices/transition_loci_indices_20241104.csv"
+        log.info "No locus index provided, using default: ${locus_index_file}"
+    }
+    locus_index_ch = channel.fromPath(locus_index_file, checkIfExists: true)
+
+    def baseline_file
+    if (params.containsKey('baseline')) {
+        baseline_file = params.baseline
+    } else {
+        baseline_file = "${projectDir}/data/baselines/full/SWFSC-chinook-reference-baseline-CV.csv"
+        log.info "No baseline provided, using default: ${baseline_file}"
+    }
+    baseline_ch = channel.fromPath(baseline_file, checkIfExists: true)
+
+    def ots28_baseline_file
+    if (params.containsKey('ots28_baseline')) {
+        ots28_baseline_file = params.ots28_baseline
+    } else {
+        ots28_baseline_file = "${projectDir}/data/baselines/full/RoSA_baseline_partial_infile.txt"
+        log.info "No OTS28 baseline for Structure provided, using default: ${baseline_file}"
+    }
+    baseline_ch = channel.fromPath(baseline_file, checkIfExists: true)
+    ots28_baseline_ch = channel.fromPath(ots28_baseline_file, checkIfExists: true)
+    
+    // Define input channels with automatic read type detection
     if (params.input_format == 'paired') {
         Channel
             .fromFilePairs(params.input, checkIfExists: true)
@@ -253,11 +279,11 @@ workflow {
             other: true
             }
     HAP2GENO(panel_branched_haps.main, locus_index_ch)
-    CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
+    //CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
 
     // Run Structure and Rubias analyses
     STRUC_PARAMS(ots28_baseline_ch, HAP2GENO.out.numgeno_OTS28)
     STRUCTURE(STRUC_PARAMS.out.structure_input, STRUC_PARAMS.out.m_params, STRUC_PARAMS.out.e_params)
     STRUCTURE_ROSA_REPORT(STRUCTURE.out.structure_output, STRUC_PARAMS.out.structure_input, params.ots28_missing_threshold)
-    RUN_RUBIAS(STRUCTURE_ROSA_REPORT.out.ots28_report, HAP2GENO.out.numgeno, baseline_ch, params.panel.toLowerCase())
+    RUN_RUBIAS(STRUCTURE_ROSA_REPORT.out.ots28_report, HAP2GENO.out.numgeno, baseline_ch, params.panel.toLowerCase(), HAP2GENO.out.geno)
 }

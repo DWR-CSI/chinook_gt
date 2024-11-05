@@ -68,6 +68,7 @@ unks_alphageno <- args[8] %>%
 ots28_missing_threshold <- 0.5 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain
 gsi_missing_threshold <- 0.6 # If more than this much GSI data is missing, consider GSI data invalid
 PofZ_threshold <- 0.7 # If the maximum PofZ is less than this, consider the result ambiguous
+Spring_PofZ_threshold <- 0.8 # If the maximum PofZ is less than this, consider the result ambiguous
 # Parse OTS28 info file ----------------
 
 
@@ -274,17 +275,17 @@ if (panel_type == "transition") {
   if (any(ots28_info$baseline == "SW")) {
     SW_baseline <- ref_match %>%
       filter(
-        collection %in% c("ButteSp", "FRHsp", "MillDeerSp", "SacWin")
+        collection %in% c("ButteSp", "FRHsp", "MillDeerSp", "SacWin", "FRHfall")
       ) %>%
       mutate(
         repunit = case_when(
-          collection == "FRHsp" ~ "spring",
+          collection %in% c("FRHsp", "FRHfall") ~ "spring",
           repunit == "winter" ~ "winter",
           TRUE ~ repunit
         ),
         collection = case_when(
           collection == "SacWin" ~ "SacWin",
-          TRUE ~ repunit
+          TRUE ~ repunit # Set collection to be the same as repunit for other collections
         )
       )
     SW_unks <- ots28_info %>%
@@ -388,15 +389,9 @@ indivs_too_much_missing_data <- mix_results %>%
   filter(n_miss_loci / total_loci > gsi_missing_threshold) %>% # filter for individuals with more than 70% missing data
   pull(indiv) # get the indivs with too much missing data
 
-
-
-
 ### export all the PofZ for each repunit
 
 mix_results_long <- combined_results[, c(2:3, 5)]
-final_calls <- mix_results %>%
-  ungroup() %>%
-  select(indiv, repunit, n_non_miss_loci, n_miss_loci, total_loci, fraction_missing, final_call)
 
 mix_results_wide <- mix_results_long %>%
   spread(repunit, PofZ) %>%
@@ -416,7 +411,8 @@ mix_results_wide <- mix_results_long %>%
     ~ round(., digits = 2)
   )) %>% # Round to 2 decimal places
   mutate(
-    GSI_perc_missing = fraction_missing * 100
+    GSI_perc_missing = round(fraction_missing * 100, digits = 1),
+    ots28_missing = round(ots28_missing, digits = 1)
   ) %>%
   select(
     SampleID = indiv,
@@ -430,6 +426,71 @@ mix_results_wide <- mix_results_long %>%
     Winter = winter,
     final_call
   ) # reorder columns
+spring_indivs <- mix_results_wide %>%
+  filter(final_call == "spring") %>%
+  pull(SampleID)
+
+if ((length(spring_indivs) > 0) && (panel_type == "full")) {
+  spring_indiv_data <- unk_match %>%
+    filter(indiv %in% spring_indivs)
+
+  # Create Spring trib baseline
+  spring_trib_baseline <- ref_match %>%
+    filter(
+      collection %in% c("ButteSp", "FRHsp", "MillDeerSp")
+    ) %>%
+    mutate(
+      repunit = collection
+    )
+  spring_trib_na_cols <- intersect(all_na_cols(spring_indiv_data), all_na_cols(spring_trib_baseline))
+
+  spring_trib_baseline <- spring_trib_baseline %>%
+    select(-any_of(spring_trib_na_cols))
+
+  spring_indiv_data <- spring_indiv_data %>%
+    select(-any_of(spring_trib_na_cols))
+  # Run Rubias with Spring unks and Spring trib baseline
+  Spring_trib_mix_est <- infer_mixture(
+    reference = spring_trib_baseline,
+    mixture = spring_indiv_data,
+    gen_start_col = 5
+  )
+  if (nrow(spring_indiv_data) == 1) {
+    Spring_trib_mix_est <- fix_missing_loci(Spring_trib_mix_est)
+  }
+  # Left join the results with mix_results_wide
+  Spring_trib_final_calls <- Spring_trib_mix_est$indiv_posteriors %>%
+    group_by(indiv, mixture_collection) %>%
+    filter(PofZ == max(PofZ)) %>%
+    arrange(indiv, collection, repunit, PofZ) %>%
+    mutate(
+      total_loci = n_miss_loci + n_non_miss_loci,
+      fraction_missing = n_miss_loci / total_loci
+    ) %>%
+    filter(PofZ == max(PofZ)) %>%
+    arrange(indiv, collection, repunit, PofZ) %>%
+    mutate(
+      trib_final_call =
+        case_when(
+          PofZ < Spring_PofZ_threshold ~ "Ambiguous",
+          fraction_missing < gsi_missing_threshold ~ repunit,
+          TRUE ~ "Missing Data"
+        )
+    ) %>%
+    ungroup() %>%
+    select(SampleID = indiv, trib_final_call)
+  Spring_trib_wide <- Spring_trib_mix_est$indiv_posteriors[, c(2:3, 5)] %>%
+    rename(SampleID = indiv) %>%
+    spread(repunit, PofZ) %>%
+    group_by(SampleID) %>%
+    left_join(Spring_trib_final_calls, by = "SampleID") %>% # add in the final calls
+    mutate(across(matches("ButteSp|FRHsp|MillDeerSp"), ~ round(., digits = 2))) %>% # Replace NA with 0
+    select(matches("SampleID|ButteSp|FRHsp|MillDeerSp|trib_final_call"))
+
+  mix_results_wide <- mix_results_wide %>%
+    left_join(Spring_trib_wide, by = "SampleID")
+}
+
 write_tsv(
   mix_results_wide,
   file = stringr::str_c(project_name, "_summary.tsv")

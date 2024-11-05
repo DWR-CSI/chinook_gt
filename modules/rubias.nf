@@ -18,6 +18,6 @@ process RUN_RUBIAS {
 
     script:
     """
-    rubias.R $unknowns_numgeno $baseline ${params.project} ${params.reporting_groups} ${params.rubias_show_missing_data} ${ots28_report} ${panel} $unknowns_geno
+    rubias.R $unknowns_numgeno $baseline ${params.project} ${params.rubias_show_missing_data} ${ots28_report} ${panel} $unknowns_geno
     """
 }

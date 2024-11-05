@@ -48,15 +48,12 @@ ref_baseline <- read_csv(args[2]) %>%
   mutate_if(is.double, as.integer) %>%
   rename_all(~ gsub("-", ".", .))
 project_name <- args[3]
-reporting_groups <- as.integer(args[4])
-if (reporting_groups != 2 && reporting_groups != 4) {
-  stop("reporting_groups must be 2 or 4")
-}
 
-show_missing_data <- as.logical(args[5])
-ots28_info_file <- args[6]
-panel_type <- as.character(args[7])
-unks_alphageno <- args[8] %>%
+
+show_missing_data <- as.logical(args[4])
+ots28_info_file <- args[5]
+panel_type <- as.character(args[6])
+unks_alphageno <- args[7] %>%
   read_tsv() %>%
   mutate_if(is.factor, as.character) %>%
   rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%

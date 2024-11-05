@@ -1,10 +1,7 @@
 # Input
-input: "az://nextflow/raw_data/L0001/*_L001_R{1,2}_001.fastq.gz"
-project: 'L0001'
-outdir: 'az://nextflow/results/fullGT'
-locus_index: 'az://nextflow/reference/full_panel/...'
+input: "az://nextflow/raw_data/L0013/*_L001_R{1,2}_001.fastq.gz"
+project: 'ADPH_L0013'
+outdir: 'az://nextflow/results/chinookGT_full'
 reporting_groups: '4'
-baseline: 'az://nextflow/reference/full_panel/...'
-panel: 'transition'
-reference: 'az://nextflow/reference/full_panel/reference/full_panel/chinook_FullPanel_RosaTransition_March2024.fasta'
-baseline_vcf: 'az://nextflow/reference/full_panel/...'
+panel: 'full'
+ots28_baseline: 'az://nextflow/reference/full_panel/RoSA_baseline_partial_infile.txt'

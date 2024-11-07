@@ -30,6 +30,7 @@ include { RUN_RUBIAS } from './modules/rubias.nf'
 include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
 include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
 include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
+include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
 
 // Functions
 
@@ -167,7 +168,16 @@ workflow {
     }
     baseline_ch = channel.fromPath(baseline_file, checkIfExists: true)
     ots28_baseline_ch = channel.fromPath(ots28_baseline_file, checkIfExists: true)
-    
+
+    def rosa_allele_key_file
+    if (params.containsKey('rosa_allele_key')) {
+        rosa_allele_key_file = params.rosa_allele_key
+    } else {
+        rosa_allele_key_file = "${projectDir}/data/baselines/full/greb1_roha_alleles_reordered_wr.txt"
+        log.info "No allele key provided, using default: ${rosa_allele_key_file}"
+    }
+    rosa_allele_key_ch = channel.fromPath(rosa_allele_key_file, checkIfExists: true)
+
     // Define input channels with automatic read type detection
     if (params.input_format == 'paired') {
         Channel
@@ -274,6 +284,7 @@ workflow {
         }
 
     BCFTOOLS_MPILEUP(mpileup_input)
+    GREB_HAPSTR(BCFTOOLS_MPILEUP.out.filtered_vcf, rosa_allele_key_ch)
 
     BWA_MEM.out.aligned_sam
         .groupTuple(by: 1)

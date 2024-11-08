@@ -324,21 +324,21 @@ if (panel_type == "transition") {
         repunit = case_when(
           collection == "ColemanLF" ~ "latefall",
           TRUE ~ repunit
-        ) %>%
-          mutate(
-            collection = case_when(
-              collection == "ColemanLF" ~ "latefall",
-              collection %in% c(
-                "ButteFall",
-                "ColemanLF",
-                "FRHfall",
-                "FRHsp",
-                "MillDeerFall",
-                "SanJoaquinFall"
-              ) ~ "fall",
-              TRUE ~ repunit
-            )
-          )
+        )
+      ) %>%
+      mutate(
+        collection = case_when(
+          collection == "ColemanLF" ~ "latefall",
+          collection %in% c(
+            "ButteFall",
+            "ColemanLF",
+            "FRHfall",
+            "FRHsp",
+            "MillDeerFall",
+            "SanJoaquinFall"
+          ) ~ "fall",
+          TRUE ~ repunit
+        )
       )
     FLF_unks <- ots28_info %>%
       filter(baseline == "FLF") %>%

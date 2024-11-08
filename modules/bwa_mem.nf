@@ -1,7 +1,9 @@
 process BWA_MEM {
     tag "Mapping ${sample_id} to $ref_name"
     label 'process_high'
-    container 'docker.io/biocontainers/bwa:v0.7.17_cv1'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    'https://depot.galaxyproject.org/singularity/bwa:0.7.18--he4a0461_1':
+    'quay.io/biocontainers/bwa:0.7.18--he4a0461_1' }"
 
     publishDir "${params.outdir}/${params.project}/bwa_mem/${ref_name}", mode: 'copy'
 

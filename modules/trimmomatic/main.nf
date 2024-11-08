@@ -1,7 +1,10 @@
 process TRIMMOMATIC {
     tag "Trimmomatic on ${sample_id}"
     label 'process_small'
-    container 'quay.io/biocontainers/trimmomatic:0.39--hdfd78af_2'
+    conda "${moduleDir}/environment.yml"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://depot.galaxyproject.org/singularity/trimmomatic:0.39--hdfd78af_2':
+        'quay.io/biocontainers/trimmomatic:0.39--hdfd78af_2' }"
 
     publishDir "${params.outdir}/${params.project}/trimmed", mode: 'copy'
 

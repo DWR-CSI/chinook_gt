@@ -39,6 +39,7 @@ fix_missing_loci <- function(mix_est) {
 args <- commandArgs(trailingOnly = TRUE)
 unks_numgeno <- read_csv(args[1]) %>%
   mutate_if(is.double, as.integer) %>%
+  mutate_if(is.logical, as.integer) %>%
   rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%
   rename_at(vars(ends_with(".2")), ~ str_replace(., "\\.2$", ".1")) %>%
   mutate(sample_type = "mixture", repunit = NA) %>%
@@ -56,6 +57,7 @@ panel_type <- as.character(args[6])
 unks_alphageno <- args[7] %>%
   read_tsv() %>%
   mutate_if(is.factor, as.character) %>%
+  mutate_if(is.logical, as.character) %>%
   rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%
   rename_at(vars(ends_with(".2")), ~ str_replace(., "\\.2$", ".1")) %>%
   mutate(sample_type = "mixture", repunit = NA) %>%
@@ -322,21 +324,21 @@ if (panel_type == "transition") {
         repunit = case_when(
           collection == "ColemanLF" ~ "latefall",
           TRUE ~ repunit
-        ) %>%
-          mutate(
-            collection = case_when(
-              collection == "ColemanLF" ~ "latefall",
-              collection %in% c(
-                "ButteFall",
-                "ColemanLF",
-                "FRHfall",
-                "FRHsp",
-                "MillDeerFall",
-                "SanJoaquinFall"
-              ) ~ "fall",
-              TRUE ~ repunit
-            )
-          )
+        )
+      ) %>%
+      mutate(
+        collection = case_when(
+          collection == "ColemanLF" ~ "latefall",
+          collection %in% c(
+            "ButteFall",
+            "ColemanLF",
+            "FRHfall",
+            "FRHsp",
+            "MillDeerFall",
+            "SanJoaquinFall"
+          ) ~ "fall",
+          TRUE ~ repunit
+        )
       )
     FLF_unks <- ots28_info %>%
       filter(baseline == "FLF") %>%

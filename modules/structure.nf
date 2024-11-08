@@ -1,9 +1,9 @@
 process STRUC_PARAMS {
     tag "Prepare STRUCTURE param files"
-    container 'ubuntu:latest'
+    container 'docker.io/nfcore/base:2.1'
     label 'process_small'
 
-    publishDir "${params.outdir}/${params.project}/structure", mode: 'copy'
+    publishDir "${params.outdir}/${params.project}/rosa", mode: 'copy'
 
     input:
     path ots28_baseline
@@ -85,7 +85,7 @@ process STRUCTURE {
     tag "Run STRUCTURE"
     label 'process_small'
     container 'docker.io/rtibiocloud/structure:v2.3.4_f2d7e82'
-    publishDir "${params.outdir}/${params.project}/structure", mode: 'copy'
+    publishDir "${params.outdir}/${params.project}/rosa", mode: 'copy'
 
     input:
     path genotypes_input

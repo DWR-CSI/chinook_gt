@@ -1,7 +1,9 @@
 process FASTQC {
     tag "FASTQC"
     label 'process_high'
-    container 'quay.io/biocontainers/fastqc:0.11.9--0'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    'https://depot.galaxyproject.org/singularity/fastqc:0.11.9--0':
+    'quay.io/biocontainers/fastqc:0.11.9--0' }"
     publishDir "${params.outdir}/${params.project}/fastqc", mode: 'copy'
 
     input:

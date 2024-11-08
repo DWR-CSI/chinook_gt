@@ -1,7 +1,9 @@
 process SAMTOOLS {
     tag "Create BAM & IDXSTATS: ${sample_id} on $reference"
     label 'process_small'
-    container 'quay.io/biocontainers/samtools:1.20--h50ea8bc_1'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    'https://depot.galaxyproject.org/singularity/samtools:1.20--h50ea8bc_1':
+    'quay.io/biocontainers/samtools:1.20--h50ea8bc_1' }"
 
     publishDir "${params.outdir}/${params.project}/samtools/${reference}", mode: 'copy', pattern: '*_sorted.bam*'
     publishDir "${params.outdir}/${params.project}/samtools/idxstats/${reference}", mode: 'copy', pattern: '*_idxstats.txt'

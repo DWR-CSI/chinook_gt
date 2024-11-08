@@ -1,6 +1,6 @@
 process STRUC_PARAMS {
     tag "Prepare STRUCTURE param files"
-    container 'ubuntu:latest'
+    container 'docker.io/nfcore/base:2.1'
     label 'process_small'
 
     publishDir "${params.outdir}/${params.project}/rosa", mode: 'copy'

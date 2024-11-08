@@ -1,7 +1,7 @@
 process GEN_MHP_SAMPLE_SHEET {
     tag "Generate MHP samplesheet: $reference"
     label 'process_xsmall'
-    container 'ubuntu:latest'
+    container 'docker.io/nfcore/base:2.1'
 
     publishDir "${params.outdir}/${params.project}/mhp/${reference}", mode: 'copy', pattern: '*_mhp_samplesheet.tsv'
 
@@ -87,7 +87,7 @@ process HAP2GENO {
 process CHECK_FILE_UPDATE {
     tag "Comparing loci indices"
     label 'process_xsmall'
-    container 'ubuntu:latest'
+    container 'docker.io/nfcore/base:2.1'
     input:
     path new_file
     path old_file

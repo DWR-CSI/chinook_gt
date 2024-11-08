@@ -1,8 +1,10 @@
 process BCFTOOLS_MPILEUP {
     tag "MPILEUP on ${reference}"
     label 'process_high'
-    container 'quay.io/biocontainers/bcftools:1.21--h8b25389_0'
-    
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+    'https://depot.galaxyproject.org/singularity/bcftools:1.21--h8b25389_0':
+    'quay.io/biocontainers/bcftools:1.21--h8b25389_0' }"
+
     publishDir "${params.outdir}/${params.project}/variants", mode: 'copy'
 
     input:

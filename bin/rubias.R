@@ -5,6 +5,14 @@ library(data.table)
 library(rubias)
 
 # Functions ------------
+clean_sample_name <- function(x) {
+  x %>%
+    str_remove("_$") %>% # Remove trailing underscore
+    str_remove("_S\\d+_?$") %>% # Remove _S123_ suffix
+    str_remove("_R\\d+_?$") %>% # Remove _R123_ suffix
+    str_remove("_L\\d+_?$") # Remove _L123_ suffix
+}
+
 all_na_cols <- function(df) {
   df %>%
     summarise_all(~ all(is.na(.))) %>%
@@ -66,7 +74,7 @@ unks_alphageno <- args[7] %>%
 
 ots28_missing_threshold <- 0.5 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain
 gsi_missing_threshold <- 0.6 # If more than this much GSI data is missing, consider GSI data invalid
-PofZ_threshold <- 0.7 # If the maximum PofZ is less than this, consider the result ambiguous
+PofZ_threshold <- 0.8 # If the maximum PofZ is less than this, consider the result ambiguous
 Spring_PofZ_threshold <- 0.8 # If the maximum PofZ is less than this, consider the result ambiguous
 # Parse OTS28 info file ----------------
 
@@ -80,8 +88,14 @@ if (panel_type == "transition") {
   stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'transition' or 'full'."))
 }
 
+unks <- unks %>%
+  mutate(indiv = clean_sample_name(indiv))
+
 ots28_info <- read_tsv(ots28_info_file) %>%
-  mutate(RoSA = if_else(RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold, "Intermediate", RoSA)) %>%
+  mutate(
+    indiv = clean_sample_name(indiv),
+    RoSA = if_else(RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold, "Intermediate", RoSA)
+  ) %>%
   filter(indiv %in% unks$indiv)
 # Combine unknowns and reference baseline ----------------
 unk_match <- unks %>%
@@ -377,9 +391,10 @@ mix_results <- combined_results %>%
   mutate(
     final_call =
       case_when(
+        fraction_missing > gsi_missing_threshold ~ "Missing Data",
         PofZ < PofZ_threshold ~ "Ambiguous",
         fraction_missing < gsi_missing_threshold ~ repunit,
-        TRUE ~ "Missing Data"
+        TRUE ~ "Assignment Error"
       )
   )
 
@@ -471,9 +486,10 @@ if ((length(spring_indivs) > 0) && (panel_type == "full")) {
     mutate(
       trib_final_call =
         case_when(
+          fraction_missing > gsi_missing_threshold ~ "Missing Data",
           PofZ < Spring_PofZ_threshold ~ "Ambiguous",
           fraction_missing < gsi_missing_threshold ~ repunit,
-          TRUE ~ "Missing Data"
+          TRUE ~ "Assignment Error"
         )
     ) %>%
     ungroup() %>%
@@ -489,7 +505,13 @@ if ((length(spring_indivs) > 0) && (panel_type == "full")) {
   mix_results_wide <- mix_results_wide %>%
     left_join(Spring_trib_wide, by = "SampleID")
 }
-
+mix_results_wide <- mix_results_wide %>%
+  mutate(
+    final_call = case_when(
+      GSI_baseline == "FLF" & final_call == "Ambiguous" ~ "Fall / Late Fall",
+      TRUE ~ final_call
+    )
+  )
 write_tsv(
   mix_results_wide,
   file = stringr::str_c(project_name, "_summary.tsv")

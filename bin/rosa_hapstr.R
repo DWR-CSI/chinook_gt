@@ -109,6 +109,12 @@ locs <- read_tsv(allele_key_path) %>%
 vcf <- read.vcfR(vcf_path)
 vcf_tidy <- vcfR2tidy(vcf)
 
+# Create a complete set of expected CHROMPOS values from locs
+expected_chrompos <- locs %>%
+    filter(gt_GT_alleles != "REF" & gt_GT_alleles != ".") %>%
+    distinct(CHROMPOS)
+
+# Process genotypes with complete locus representation
 gtypes <- vcf_tidy$gt %>%
     select(ChromKey, POS, Indiv, gt_GT_alleles, gt_DP, gt_AD) %>%
     left_join(
@@ -118,6 +124,14 @@ gtypes <- vcf_tidy$gt %>%
             )
     ) %>%
     unite("CHROMPOS", c("CHROM", "POS"), sep = "_", remove = T) %>%
+    # First ensure we have all combinations of Indiv and CHROMPOS
+    full_join(
+        crossing(
+            CHROMPOS = expected_chrompos$CHROMPOS,
+            Indiv = unique(vcf_tidy$gt$Indiv)
+        ),
+        by = c("CHROMPOS", "Indiv")
+    ) %>%
     filter(CHROMPOS %in% locs$CHROMPOS) %>%
     group_by(Indiv) %>%
     arrange(match(CHROMPOS, locs$CHROMPOS), .by_group = TRUE) %>%
@@ -125,15 +139,17 @@ gtypes <- vcf_tidy$gt %>%
 
 ptypes <- gtypes %>%
     select(CHROMPOS, Indiv, gt_GT_alleles) %>%
-    complete(CHROMPOS, Indiv) %>%
-    replace_na(list(gt_GT_alleles = "REF")) %>%
+    # No longer need complete() since we did full_join above
+    mutate(gt_GT_alleles = if_else(is.na(gt_GT_alleles), ".", gt_GT_alleles)) %>%
     left_join(locs) %>%
     group_by(Indiv) %>%
     distinct(Indiv, CHROMPOS, .keep_all = TRUE) %>%
     arrange(haporder, .by_group = TRUE) %>%
     summarise(hapstr = paste(pheno, collapse = "")) %>%
-    mutate(hapstr = str_replace(hapstr, "NA", "?")) %>%
     mutate(
+        # Replace any NA values that might have slipped through
+        hapstr = str_replace_all(hapstr, "NA", "?"),
+        # Count various allele types
         E_count = str_count(hapstr, "E"), # Early
         L_count = str_count(hapstr, "L"), # Late
         Q_count = str_count(hapstr, "\\?"), # Missing, normal RoSA

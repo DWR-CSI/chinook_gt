@@ -1,0 +1,6 @@
+# Input
+input: "az://nextflow/raw_data/ADPH_mushed/*_R{1,2}_concatenated.fastq.gz"
+project: 'ADPH_mush'
+outdir: 'az://nextflow/results/chinookGT_full'
+panel: 'full'
+ots28_baseline: 'az://nextflow/reference/full_panel/RoSA_baseline_partial_infile.txt'

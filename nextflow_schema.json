@@ -15,11 +15,6 @@
       "description": "Path to input FastQ files (must be paired-end)",
       "default": "az://seqera1/raw_data/ADPH_mushed/*_R{1,2}_concatenated.fastq.gz"
     },
-    "outdir": {
-      "type": "string",
-      "description": "Directory to save results (do not change)",
-      "default": "az://seqera1/results/chinookGT_full"
-    },
     "min_overlap": {
       "type": "integer",
       "description": "FLASH2: Minimum overlap length for read merging",
@@ -34,11 +29,6 @@
       "type": "string",
       "description": "Trimmomatic: Trimming parameters",
       "default": "LEADING:15 TRAILING:15 SLIDINGWINDOW:4:15 MINLEN:36"
-    },
-    "reference": {
-      "type": "string",
-      "description": "STRUCTURE: Path to RoSA baseline file",
-      "default": "az://seqera1/reference/full_panel/RoSA_baseline_partial_infile.txt"
     }
   }
 }

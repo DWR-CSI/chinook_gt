@@ -1,3 +1,8 @@
 reports:
   multiqc_report.html:
     display: "MultiQC HTML report"
+  rosa/*_RoSA_hapstrs.tsv:
+    display: "RoSA haplotype strings report"
+  rubias/*_summary.tsv:
+    display: "GSI Summary"
+

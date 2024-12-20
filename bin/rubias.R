@@ -197,7 +197,7 @@ all_full_mix_results_summary <- all_full_mix_results %>%
       fraction_missing > gsi_missing_threshold ~ "Missing Data",
       PofZ < PofZ_threshold ~ "Ambiguous",
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
-      (fraction_missing < gsi_missing_threshold) & (repunit != "spring") ~ repunit,
+      (fraction_missing < gsi_missing_threshold) ~ repunit,
       TRUE ~ "Assignment Error"
     ),
     tributary = case_when(
@@ -219,7 +219,7 @@ repunit_calls <- all_full_mix_results %>%
       Prob_repunit < PofZ_threshold ~ "Ambiguous",
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
       (RoSA == "Late") & (repunit == "spring") ~ "Fall",
-      (fraction_missing < gsi_missing_threshold) & (repunit != "spring") ~ repunit,
+      (fraction_missing < gsi_missing_threshold) ~ repunit,
       TRUE ~ "Assignment Error"
     )
   ) %>%

@@ -195,7 +195,7 @@ all_full_mix_results_summary <- all_full_mix_results %>%
     fraction_missing = n_miss_loci / (n_miss_loci + n_non_miss_loci),
     final_call = case_when(
       fraction_missing > gsi_missing_threshold ~ "Missing Data",
-      PofZ < PofZ_threshold ~ "Ambiguous",
+      Prob_repunit < PofZ_threshold ~ "Ambiguous",
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
       (fraction_missing < gsi_missing_threshold) ~ repunit,
       TRUE ~ "Assignment Error"
@@ -272,6 +272,7 @@ mix_results_wide <- all_full_mix_results %>%
   mutate(
     GSI_perc_missing = round(fraction_missing * 100, digits = 1),
     ots28_missing = round(ots28_missing, digits = 1)
+    probability = round(probability, digits = 3)
   ) %>%
   select(
     SampleID = indiv,
@@ -285,7 +286,10 @@ mix_results_wide <- all_full_mix_results %>%
     final_call,
     probability
   ) %>%
-  left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID")
+  left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID") %>%
+  mutate(
+    trib_PofZ = round(trib_PofZ, digits = 3)
+  )
 
 write_tsv(
   mix_results_wide,

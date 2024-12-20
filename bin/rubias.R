@@ -96,7 +96,8 @@ ots28_info <- read_tsv(ots28_info_file) %>%
     indiv = clean_sample_name(indiv),
     RoSA = if_else(RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold, "Intermediate", RoSA)
   ) %>%
-  filter(indiv %in% unks$indiv)
+  filter(indiv %in% unks$indiv) %>%
+  select(indiv, RoSA, ots28_missing)
 # Combine unknowns and reference baseline ----------------
 unk_match <- unks %>%
   select(any_of(names(ref_baseline))) # Keep only columns (loci) that are in ref_baseline
@@ -171,247 +172,91 @@ all_full_mix_est <- infer_mixture(
   mixture = unk_match,
   gen_start_col = 5
 )
-
-all_full_mix_results <- all_full_mix_est$indiv_posteriors %>%
-  group_by(indiv, mixture_collection) %>%
-  filter(PofZ == max(PofZ)) %>%
-  arrange(indiv, collection, repunit, PofZ)
-
-write_tsv(all_full_mix_results, file = stringr::str_c(project_name, "_full_mix_estimates.tsv"))
-
-if (panel_type == "transition") {
-  if (any(ots28_info$baseline == "SW")) {
-    SW_baseline <- ref_match %>%
-      filter(
-        str_detect(repunit, "Spring") | str_detect(repunit, "Winter")
-      )
-    SW_unks <- ots28_info %>%
-      filter(baseline == "SW") %>%
-      pull(indiv)
-    SW_unk_match <- unk_match %>%
-      filter(indiv %in% SW_unks)
-    SW_na_cols <- intersect(all_na_cols(SW_unk_match), all_na_cols(SW_baseline))
-    SW_unk_match <- SW_unk_match %>%
-      select(-any_of(SW_na_cols))
-    SW_baseline <- SW_baseline %>%
-      select(-any_of(SW_na_cols))
-    SW_mix_est <- infer_mixture(
-      reference = SW_baseline,
-      mixture = SW_unk_match,
-      gen_start_col = 5
-    )
-
-    if (nrow(SW_unk_match) == 1) {
-      SW_mix_est <- fix_missing_loci(SW_mix_est)
-    }
-    combined_results <- bind_rows(combined_results, SW_mix_est$indiv_posteriors)
-  }
-
-  if (any(ots28_info$baseline == "FLF")) {
-    FLF_baseline <- ref_match %>%
-      filter(
-        str_detect(repunit, "Fall") | str_detect(repunit, "Late")
-      )
-    FLF_unks <- ots28_info %>%
-      filter(baseline == "FLF") %>%
-      pull(indiv)
-    FLF_unk_match <- unk_match %>%
-      filter(indiv %in% FLF_unks)
-    # Return column names where all values are NA
-    FLF_na_cols <- intersect(all_na_cols(FLF_unk_match), all_na_cols(FLF_baseline))
-    FLF_unk_match <- FLF_unk_match %>%
-      select(-any_of(FLF_na_cols))
-    FLF_baseline <- FLF_baseline %>%
-      select(-any_of(FLF_na_cols))
-
-    FLF_mix_est <- infer_mixture(
-      reference = FLF_baseline,
-      mixture = FLF_unk_match,
-      gen_start_col = 5
-    )
-    if (nrow(FLF_unk_match) == 1) {
-      FLF_mix_est <- fix_missing_loci(FLF_mix_est)
-    }
-    combined_results <- bind_rows(combined_results, FLF_mix_est$indiv_posteriors)
-  }
-
-  if (any(ots28_info$baseline == "Full")) {
-    full_unks <- ots28_info %>%
-      filter(baseline == "Full") %>%
-      pull(indiv)
-    full_unk_match <- unk_match %>%
-      filter(indiv %in% full_unks)
-    full_na_cols <- intersect(all_na_cols(full_unk_match), all_na_cols(ref_match))
-    full_unk_match <- full_unk_match %>%
-      select(-any_of(full_na_cols))
-    full_ref_match <- ref_match %>%
-      select(-any_of(full_na_cols))
-    full_mix_est <- infer_mixture(
-      reference = full_ref_match,
-      mixture = full_unk_match,
-      gen_start_col = 5
-    )
-    if (nrow(full_unk_match) == 1) {
-      full_mix_est <- fix_missing_loci(full_mix_est)
-    }
-    combined_results <- bind_rows(combined_results, full_mix_est$indiv_posteriors)
-  }
-} else if (panel_type == "full") {
-  if (any(ots28_info$baseline == "Full")) {
-    full_unks <- ots28_info %>%
-      filter(baseline == "Full") %>%
-      pull(indiv)
-    full_unk_match <- unk_match %>%
-      filter(indiv %in% full_unks)
-    full_na_cols <- intersect(all_na_cols(full_unk_match), all_na_cols(ref_match))
-    full_unk_match <- full_unk_match %>%
-      select(-any_of(full_na_cols))
-    full_ref_match <- ref_match %>%
-      select(-any_of(full_na_cols)) %>%
-      mutate(
-        repunit = case_when(
-          collection == "ColemanLF" ~ "latefall",
-          TRUE ~ repunit
-        )
-      ) %>%
-      mutate(collection = repunit)
-    full_mix_est <- infer_mixture(
-      reference = full_ref_match,
-      mixture = full_unk_match,
-      gen_start_col = 5
-    )
-    if (nrow(full_unk_match) == 1) {
-      full_mix_est <- fix_missing_loci(full_mix_est)
-    }
-    combined_results <- bind_rows(combined_results, full_mix_est$indiv_posteriors)
-  }
-  if (any(ots28_info$baseline == "SW")) {
-    SW_baseline <- ref_match %>%
-      filter(
-        collection %in% c("ButteSp", "FRHsp", "MillDeerSp", "SacWin", "FRHfall")
-      ) %>%
-      mutate(
-        repunit = case_when(
-          collection %in% c("FRHsp", "FRHfall") ~ "spring",
-          repunit == "winter" ~ "winter",
-          TRUE ~ repunit
-        ),
-        collection = case_when(
-          collection == "SacWin" ~ "SacWin",
-          TRUE ~ repunit # Set collection to be the same as repunit for other collections
-        )
-      )
-    SW_unks <- ots28_info %>%
-      filter(baseline == "SW") %>%
-      pull(indiv)
-    SW_unk_match <- unk_match %>%
-      filter(indiv %in% SW_unks)
-    SW_na_cols <- intersect(all_na_cols(SW_unk_match), all_na_cols(SW_baseline))
-    SW_unk_match <- SW_unk_match %>%
-      select(-any_of(SW_na_cols))
-    SW_baseline <- SW_baseline %>%
-      select(-any_of(SW_na_cols))
-    SW_mix_est <- infer_mixture(
-      reference = SW_baseline,
-      mixture = SW_unk_match,
-      gen_start_col = 5
-    )
-
-    if (nrow(SW_unk_match) == 1) {
-      SW_mix_est <- fix_missing_loci(SW_mix_est)
-    }
-    combined_results <- bind_rows(combined_results, SW_mix_est$indiv_posteriors)
-  }
-  if (any(ots28_info$baseline == "FLF")) {
-    FLF_baseline <- ref_match %>%
-      filter(
-        collection %in% c(
-          "ButteFall",
-          "ColemanLF",
-          "FRHfall",
-          "FRHsp",
-          "MillDeerFall",
-          "SanJoaquinFall"
-        )
-      ) %>%
-      mutate(
-        repunit = case_when(
-          collection == "ColemanLF" ~ "latefall",
-          TRUE ~ repunit
-        )
-      ) %>%
-      mutate(
-        collection = case_when(
-          collection == "ColemanLF" ~ "latefall",
-          collection %in% c(
-            "ButteFall",
-            "ColemanLF",
-            "FRHfall",
-            "FRHsp",
-            "MillDeerFall",
-            "SanJoaquinFall"
-          ) ~ "fall",
-          TRUE ~ repunit
-        )
-      )
-    FLF_unks <- ots28_info %>%
-      filter(baseline == "FLF") %>%
-      pull(indiv)
-    FLF_unk_match <- unk_match %>%
-      filter(indiv %in% FLF_unks)
-    # Return column names where all values are NA
-    FLF_na_cols <- intersect(all_na_cols(FLF_unk_match), all_na_cols(FLF_baseline))
-    FLF_unk_match <- FLF_unk_match %>%
-      select(-any_of(FLF_na_cols))
-    FLF_baseline <- FLF_baseline %>%
-      select(-any_of(FLF_na_cols))
-
-    FLF_mix_est <- infer_mixture(
-      reference = FLF_baseline,
-      mixture = FLF_unk_match,
-      gen_start_col = 5
-    )
-    if (nrow(FLF_unk_match) == 1) {
-      FLF_mix_est <- fix_missing_loci(FLF_mix_est)
-    }
-    combined_results <- bind_rows(combined_results, FLF_mix_est$indiv_posteriors)
-  }
-} else {
-  stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'transition' or 'full'."))
+if (nrow(unk_match) == 1) {
+  all_full_mix_est <- fix_missing_loci(all_full_mix_est)
 }
 
-mix_results <- combined_results %>%
-  group_by(indiv, mixture_collection) %>%
-  mutate(
-    total_loci = n_miss_loci + n_non_miss_loci,
-    fraction_missing = n_miss_loci / total_loci
-  ) %>%
-  filter(PofZ == max(PofZ)) %>%
-  arrange(indiv, collection, repunit, PofZ) %>%
-  mutate(
-    final_call =
-      case_when(
-        fraction_missing > gsi_missing_threshold ~ "Missing Data",
-        PofZ < PofZ_threshold ~ "Ambiguous",
-        fraction_missing < gsi_missing_threshold ~ repunit,
-        TRUE ~ "Assignment Error"
-      )
-  )
 
-indivs_too_much_missing_data <- mix_results %>%
-  mutate(total_loci = n_miss_loci + n_non_miss_loci) %>% # calculate total number of loci
-  filter(n_miss_loci / total_loci > gsi_missing_threshold) %>% # filter for individuals with more than 70% missing data
-  pull(indiv) # get the indivs with too much missing data
+all_full_mix_est_indiv_posteriors <- all_full_mix_est$indiv_posteriors
+
+all_full_mix_results <- all_full_mix_est$indiv_posteriors %>%
+  group_by(indiv, mixture_collection, n_miss_loci, n_non_miss_loci, repunit) %>%
+  summarize(
+    Prob_repunit = sum(PofZ)
+  ) %>%
+  arrange(indiv, repunit, Prob_repunit)
+
+write_tsv(all_full_mix_est$indiv_posteriors, file = stringr::str_c(project_name, "_full_mix_posteriors.tsv"))
+
+
+all_full_mix_results_summary <- all_full_mix_results %>%
+  left_join(ots28_info, by = "indiv") %>%
+  mutate(
+    fraction_missing = n_miss_loci / (n_miss_loci + n_non_miss_loci),
+    final_call = case_when(
+      fraction_missing > gsi_missing_threshold ~ "Missing Data",
+      PofZ < PofZ_threshold ~ "Ambiguous",
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
+      (fraction_missing < gsi_missing_threshold) & (repunit != "spring") ~ repunit,
+      TRUE ~ "Assignment Error"
+    ),
+    tributary = case_when(
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "Feather River",
+      (fraction_missing < gsi_missing_threshold) & (repunit == "spring") ~ collection
+    )
+  )
 
 ### export all the PofZ for each repunit
 
-mix_results_long <- combined_results[, c(2:3, 5)]
+repunit_calls <- all_full_mix_results %>%
+  group_by(indiv) %>%
+  filter(Prob_repunit == max(Prob_repunit)) %>%
+  left_join(ots28_info, by = "indiv") %>%
+  mutate(
+    fraction_missing = n_miss_loci / (n_miss_loci + n_non_miss_loci),
+    final_call = case_when(
+      fraction_missing > gsi_missing_threshold ~ "Missing Data",
+      Prob_repunit < PofZ_threshold ~ "Ambiguous",
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
+      (RoSA == "Late") & (repunit == "spring") ~ "Fall",
+      (fraction_missing < gsi_missing_threshold) & (repunit != "spring") ~ repunit,
+      TRUE ~ "Assignment Error"
+    )
+  ) %>%
+  select(indiv, RoSA, ots28_missing, n_non_miss_loci, fraction_missing, best_repunit = repunit, prob_repunit = Prob_repunit, final_call)
 
-mix_results_wide <- mix_results_long %>%
-  spread(repunit, PofZ) %>%
+
+
+raw_max_PofZ <- all_full_mix_est_indiv_posteriors %>%
+  group_by(indiv, mixture_collection) %>%
+  filter(PofZ == max(PofZ))
+
+raw_repunit_probs <- all_full_mix_results %>%
+  group_by(indiv) %>%
+  filter(Prob_repunit == max(Prob_repunit)) %>%
+  left_join(raw_max_PofZ %>% ungroup() %>% select(indiv, collection, PofZ, log_likelihood, z_score), by = "indiv") %>%
+  left_join(ots28_info, by = "indiv") %>%
+  mutate(
+    tributary = case_when(
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "Feather River Spring",
+      (RoSA == "Late") & (repunit == "spring") ~ NA_character_,
+      repunit == "spring" ~ collection,
+      TRUE ~ NA_character_
+    ),
+    PofZ = case_when(
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ NA_real_,
+      (RoSA == "Late") & (repunit == "spring") ~ NA_real_,
+      repunit == "spring" ~ PofZ,
+      TRUE ~ NA_real_
+    )
+  )
+
+
+mix_results_wide <- all_full_mix_results %>%
+  spread(repunit, Prob_repunit) %>%
   group_by(indiv) %>%
   left_join(ots28_info, by = "indiv") %>% # add in the OTS28 info
-  left_join(mix_results %>% ungroup() %>% select(indiv, fraction_missing, final_call), by = "indiv") %>% # add in the final calls
+  left_join(repunit_calls %>% ungroup() %>% select(indiv, fraction_missing, final_call, probability = prob_repunit), by = "indiv") %>% # add in the final calls
   mutate(across(
     matches("spring|winter|fall|late"),
     ~ replace_na(., 0)
@@ -432,86 +277,16 @@ mix_results_wide <- mix_results_long %>%
     SampleID = indiv,
     RoSA,
     RoSA_perc_missing = ots28_missing,
-    GSI_baseline = baseline,
     GSI_perc_missing,
     Fall = fall,
     Late_fall = latefall,
     Spring = spring,
     Winter = winter,
-    final_call
-  ) # reorder columns
-spring_indivs <- mix_results_wide %>%
-  filter(final_call == "spring") %>%
-  pull(SampleID)
+    final_call,
+    probability
+  ) %>%
+  left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID")
 
-if ((length(spring_indivs) > 0) && (panel_type == "full")) {
-  spring_indiv_data <- unk_match %>%
-    filter(indiv %in% spring_indivs)
-
-  # Create Spring trib baseline
-  spring_trib_baseline <- ref_match %>%
-    filter(
-      collection %in% c("ButteSp", "FRHsp", "MillDeerSp")
-    ) %>%
-    mutate(
-      repunit = collection
-    )
-  spring_trib_na_cols <- intersect(all_na_cols(spring_indiv_data), all_na_cols(spring_trib_baseline))
-
-  spring_trib_baseline <- spring_trib_baseline %>%
-    select(-any_of(spring_trib_na_cols))
-
-  spring_indiv_data <- spring_indiv_data %>%
-    select(-any_of(spring_trib_na_cols))
-  # Run Rubias with Spring unks and Spring trib baseline
-  Spring_trib_mix_est <- infer_mixture(
-    reference = spring_trib_baseline,
-    mixture = spring_indiv_data,
-    gen_start_col = 5
-  )
-  if (nrow(spring_indiv_data) == 1) {
-    Spring_trib_mix_est <- fix_missing_loci(Spring_trib_mix_est)
-  }
-  # Left join the results with mix_results_wide
-  Spring_trib_final_calls <- Spring_trib_mix_est$indiv_posteriors %>%
-    group_by(indiv, mixture_collection) %>%
-    filter(PofZ == max(PofZ)) %>%
-    arrange(indiv, collection, repunit, PofZ) %>%
-    mutate(
-      total_loci = n_miss_loci + n_non_miss_loci,
-      fraction_missing = n_miss_loci / total_loci
-    ) %>%
-    filter(PofZ == max(PofZ)) %>%
-    arrange(indiv, collection, repunit, PofZ) %>%
-    mutate(
-      trib_final_call =
-        case_when(
-          fraction_missing > gsi_missing_threshold ~ "Missing Data",
-          PofZ < Spring_PofZ_threshold ~ "Ambiguous",
-          fraction_missing < gsi_missing_threshold ~ repunit,
-          TRUE ~ "Assignment Error"
-        )
-    ) %>%
-    ungroup() %>%
-    select(SampleID = indiv, trib_final_call)
-  Spring_trib_wide <- Spring_trib_mix_est$indiv_posteriors[, c(2:3, 5)] %>%
-    rename(SampleID = indiv) %>%
-    spread(repunit, PofZ) %>%
-    group_by(SampleID) %>%
-    left_join(Spring_trib_final_calls, by = "SampleID") %>% # add in the final calls
-    mutate(across(matches("ButteSp|FRHsp|MillDeerSp"), ~ round(., digits = 2))) %>% # Replace NA with 0
-    select(matches("SampleID|ButteSp|FRHsp|MillDeerSp|trib_final_call"))
-
-  mix_results_wide <- mix_results_wide %>%
-    left_join(Spring_trib_wide, by = "SampleID")
-}
-mix_results_wide <- mix_results_wide %>%
-  mutate(
-    final_call = case_when(
-      GSI_baseline == "FLF" & final_call == "Ambiguous" ~ "Fall / Late Fall",
-      TRUE ~ final_call
-    )
-  )
 write_tsv(
   mix_results_wide,
   file = stringr::str_c(project_name, "_summary.tsv")

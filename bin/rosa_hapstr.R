@@ -170,11 +170,6 @@ ptypes_report <- ptypes_analyzed %>%
         RoSA = case_when(
             RoSA == "Insufficient_Data" ~ "Uncertain",
             TRUE ~ RoSA
-        ),
-        baseline = case_when(
-            RoSA == "Early" ~ "SW",
-            RoSA == "Late" ~ "FLF",
-            TRUE ~ "Full"
         )
     )
 

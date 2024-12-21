@@ -13,7 +13,7 @@ process RUN_RUBIAS {
 
     output:
     path "*_matchy_pairs.tsv", emit: mpairs
-    path "*_full_mix_estimates.tsv", emit: full_mix_estimates
+    path "*_full_mix_posteriors.tsv", emit: full_mix_posteriors
     path "*_summary.tsv", emit: summary
 
     script:

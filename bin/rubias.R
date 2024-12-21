@@ -189,23 +189,6 @@ all_full_mix_results <- all_full_mix_est$indiv_posteriors %>%
 write_tsv(all_full_mix_est$indiv_posteriors, file = stringr::str_c(project_name, "_full_mix_posteriors.tsv"))
 
 
-all_full_mix_results_summary <- all_full_mix_results %>%
-  left_join(ots28_info, by = "indiv") %>%
-  mutate(
-    fraction_missing = n_miss_loci / (n_miss_loci + n_non_miss_loci),
-    final_call = case_when(
-      fraction_missing > gsi_missing_threshold ~ "Missing Data",
-      Prob_repunit < PofZ_threshold ~ "Ambiguous",
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
-      (fraction_missing < gsi_missing_threshold) ~ repunit,
-      TRUE ~ "Assignment Error"
-    ),
-    tributary = case_when(
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "Feather River",
-      (fraction_missing < gsi_missing_threshold) & (repunit == "spring") ~ collection
-    )
-  )
-
 ### export all the PofZ for each repunit
 
 repunit_calls <- all_full_mix_results %>%
@@ -224,7 +207,6 @@ repunit_calls <- all_full_mix_results %>%
     )
   ) %>%
   select(indiv, RoSA, ots28_missing, n_non_miss_loci, fraction_missing, best_repunit = repunit, prob_repunit = Prob_repunit, final_call)
-
 
 
 raw_max_PofZ <- all_full_mix_est_indiv_posteriors %>%
@@ -271,7 +253,7 @@ mix_results_wide <- all_full_mix_results %>%
   )) %>% # Round to 2 decimal places
   mutate(
     GSI_perc_missing = round(fraction_missing * 100, digits = 1),
-    ots28_missing = round(ots28_missing, digits = 1)
+    ots28_missing = round(ots28_missing, digits = 1),
     probability = round(probability, digits = 3)
   ) %>%
   select(

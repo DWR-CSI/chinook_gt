@@ -198,13 +198,13 @@ repunit_calls <- all_full_mix_results %>%
   mutate(
     fraction_missing = n_miss_loci / (n_miss_loci + n_non_miss_loci),
     final_call = case_when(
+      (fraction_missing > gsi_missing_threshold) & (RoSA == "Late") ~ "Fall / Late Fall",
+      (fraction_missing > gsi_missing_threshold) & (RoSA == "Early") ~ "Spring / Winter",
       fraction_missing > gsi_missing_threshold ~ "Missing Data",
       Prob_repunit < PofZ_threshold ~ "Ambiguous",
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
       (RoSA == "Late") & (repunit == "spring") ~ "Fall",
       (fraction_missing < gsi_missing_threshold) ~ repunit,
-      (fraction_missing >= gsi_missing_threshold) & (RoSA == "Late") ~ "Fall / Late Fall",
-      (fraction_missing >= gsi_missing_threshold) & (RoSA == "Early") ~ "Spring / Winter",
       TRUE ~ "Assignment Error"
     )
   ) %>%
@@ -222,8 +222,8 @@ raw_repunit_probs <- all_full_mix_results %>%
   left_join(ots28_info, by = "indiv") %>%
   mutate(
     tributary = case_when(
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & (Prob_repunit >= PofZ_threshold) ~ "Feather River Spring",
-      (RoSA == "Late") & (repunit == "spring") & (Prob_repunit >= PofZ_threshold) ~ NA_character_,
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & (Prob_repunit >= PofZ_threshold) & (fraction_missing < gsi_missing_threshold) ~ "Feather River Spring",
+      (RoSA == "Late") & (repunit == "spring") & (Prob_repunit > PofZ_threshold) ~ NA_character_,
       repunit == "spring" ~ collection,
       TRUE ~ NA_character_
     ),

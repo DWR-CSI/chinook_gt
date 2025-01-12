@@ -203,6 +203,8 @@ repunit_calls <- all_full_mix_results %>%
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
       (RoSA == "Late") & (repunit == "spring") ~ "Fall",
       (fraction_missing < gsi_missing_threshold) ~ repunit,
+      (fraction_missing >= gsi_missing_threshold) & (RoSA == "Late") = "Fall / Late Fall",
+      (fraction_missing >= gsi_missing_threshold) & (RoSA == "Early") = "Spring / Winter",
       TRUE ~ "Assignment Error"
     )
   ) %>%
@@ -220,8 +222,8 @@ raw_repunit_probs <- all_full_mix_results %>%
   left_join(ots28_info, by = "indiv") %>%
   mutate(
     tributary = case_when(
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "Feather River Spring",
-      (RoSA == "Late") & (repunit == "spring") ~ NA_character_,
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & (Prob_repunit >= PofZ_threshold) ~ "Feather River Spring",
+      (RoSA == "Late") & (repunit == "spring") & (Prob_repunit >= PofZ_threshold) ~ NA_character_,
       repunit == "spring" ~ collection,
       TRUE ~ NA_character_
     ),
@@ -254,7 +256,7 @@ mix_results_wide <- all_full_mix_results %>%
   mutate(
     GSI_perc_missing = round(fraction_missing * 100, digits = 1),
     ots28_missing = round(ots28_missing, digits = 1),
-    probability = round(probability, digits = 3)
+    probability = if_else((final_call != "Missing Data"), round(probability, digits = 3), NA_real_)
   ) %>%
   select(
     SampleID = indiv,
@@ -270,7 +272,7 @@ mix_results_wide <- all_full_mix_results %>%
   ) %>%
   left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID") %>%
   mutate(
-    trib_PofZ = round(trib_PofZ, digits = 3)
+    trib_PofZ = if_else(!(final_call %in% c("Missing Data", "Fall / Late Fall", "Spring / Winter")), round(trib_PofZ, digits = 3), NA_real_)
   )
 
 write_tsv(

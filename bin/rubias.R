@@ -222,7 +222,7 @@ raw_repunit_probs <- all_full_mix_results %>%
   left_join(ots28_info, by = "indiv") %>%
   mutate(
     tributary = case_when(
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & (Prob_repunit >= PofZ_threshold) & (fraction_missing < gsi_missing_threshold) ~ "Feather River Spring",
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & (Prob_repunit >= PofZ_threshold) & ((n_miss_loci / (n_miss_loci + n_non_miss_loci)) < gsi_missing_threshold) ~ "Feather River Spring",
       (RoSA == "Late") & (repunit == "spring") & (Prob_repunit > PofZ_threshold) ~ NA_character_,
       repunit == "spring" ~ collection,
       TRUE ~ NA_character_

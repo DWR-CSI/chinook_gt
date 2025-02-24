@@ -11,19 +11,19 @@ process ANALYZE_IDXSTATS {
     path idxstats_files
 
     output:
-    path "idxstats_plots/*.{pdf,jpg,png}", emit: idxstats_plots
-    path "loci_qc/*.{pdf,csv,txt}", emit: loci_qc
+    path "stats_plots/*.{pdf,jpg,png}", emit: idxstats_plots
+    path "loci_qc/*.{pdf,png,csv,txt}", emit: loci_qc
     path "reads_matrix.txt", emit: matrix
     
     script:
     """
     # Create output directories
-    mkdir -p idxstats_plots loci_qc
+    mkdir -p stats_plots loci_qc
     
     # Run original idxstats analysis
-    analyze_idxstats.R . idxstats_plots ${params.n_loci}
+    analyze_idxstats.R \$PWD stats_plots ${params.n_loci}
     
     # Run additional loci QC analysis
-    check_loci.R idxstats_plots/reads_matrix.txt loci_qc
+    check_loci.R reads_matrix.txt loci_qc
     """
 }

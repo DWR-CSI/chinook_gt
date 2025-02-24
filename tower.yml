@@ -5,4 +5,15 @@ reports:
     display: "RoSA haplotype strings report"
   rubias/*_summary.tsv:
     display: "GSI Summary"
+  idxstats_analysis/analysis_summary.txt:
+    display: "Sequencing Performance Summary"
+  idxstats_analysis/summary_plots.pdf:
+    display: "Loci Sequencing Summary Plots"
+  idxstats_analysis/locus_statistics.csv:
+    display: "Loci Statistics"
+  idxstats_analysis/problematic_loci.csv:
+    display: "Problematic Loci Summary"
+  idxstats_analysis/sample_statistics.csv:
+    display: "Sample Sequencing Statistics"
+
 

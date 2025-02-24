@@ -21,7 +21,7 @@ process_idxstats <- function(file, n_loci) {
 # Main function to process all files and generate plots
 main <- function(input_dir, output_dir, n_loci) {
   # List all idxstats files in the input directory
-  files <- list.files(input_dir, pattern = "\\.idxstats$", full.names = TRUE)
+  files <- list.files(input_dir, pattern = "_idxstats.txt$", full.names = TRUE)
 
   # Process all files
   idx_list <- map(files, ~ process_idxstats(.x, n_loci))

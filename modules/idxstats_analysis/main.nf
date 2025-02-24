@@ -24,6 +24,6 @@ process ANALYZE_IDXSTATS {
     analyze_idxstats.R \$PWD stats_plots ${params.n_loci}
     
     # Run additional loci QC analysis
-    check_loci.R reads_matrix.txt loci_qc
+    #check_loci.R reads_matrix.txt loci_qc
     """
 }

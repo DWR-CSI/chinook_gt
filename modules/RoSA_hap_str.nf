@@ -1,6 +1,9 @@
 process GREB_HAPSTR {
     tag 'Extracting RoSA info via hapstr'
-    container 'quay.io/biocontainers/mulled-v2-9a0dd936806dc33b863c3b3f851665f40f2af214:5aaef6d70fcd32819000b9ac3c8ce065fbcaac8b-0'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://depot.galaxyproject.org/singularity/mulled-v2-9a0dd936806dc33b863c3b3f851665f40f2af214:5aaef6d70fcd32819000b9ac3c8ce065fbcaac8b-0':
+        'quay.io/biocontainers/mulled-v2-9a0dd936806dc33b863c3b3f851665f40f2af214:5aaef6d70fcd32819000b9ac3c8ce065fbcaac8b-0' }"
+
     label 'process_medium'
 
     publishDir "${params.outdir}/${params.project}/rosa", mode: 'copy'

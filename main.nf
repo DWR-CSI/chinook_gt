@@ -324,9 +324,6 @@ workflow {
     HAP2GENO(panel_branched_haps.main, locus_index_ch)
     //CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
 
-    // Run Structure and Rubias analyses
-    STRUC_PARAMS(ots28_baseline_ch, HAP2GENO.out.numgeno_OTS28)
-    STRUCTURE(STRUC_PARAMS.out.structure_input, STRUC_PARAMS.out.m_params, STRUC_PARAMS.out.e_params)
-    STRUCTURE_ROSA_REPORT(STRUCTURE.out.structure_output, STRUC_PARAMS.out.structure_input, params.ots28_missing_threshold)
+    // Run Rubias analyses
     RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, HAP2GENO.out.numgeno, baseline_ch, params.panel.toLowerCase(), HAP2GENO.out.geno)
 }

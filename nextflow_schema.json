@@ -29,6 +29,21 @@
       "type": "string",
       "description": "Trimmomatic: Trimming parameters",
       "default": "LEADING:15 TRAILING:15 SLIDINGWINDOW:4:15 MINLEN:36"
+    },
+    "ots28_missing_threshold": {
+      "type": "number",
+      "description": "If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain",
+      "default": 0.5
+    },
+    "gsi_missing_threshold": {
+      "type": "number",
+      "description": "If more than this much GSI data is missing, consider GSI data invalid",
+      "default": 0.6
+    },
+    "pofz_threshold": {
+      "type": "number",
+      "description": "If the maximum PofZ is less than this, consider the result ambiguous",
+      "default": 0.8
     }
   }
 }

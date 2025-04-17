@@ -72,10 +72,10 @@ unks_alphageno <- args[7] %>%
   rename(collection = group, indiv = indiv.ID) %>%
   rename_all(~ gsub("-", ".", .))
 
-ots28_missing_threshold <- 0.5 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain
-gsi_missing_threshold <- 0.6 # If more than this much GSI data is missing, consider GSI data invalid
-PofZ_threshold <- 0.8 # If the maximum PofZ is less than this, consider the result ambiguous
-Spring_PofZ_threshold <- 0.8 # If the maximum PofZ is less than this, consider the result ambiguous
+ots28_missing_threshold <- as.numeric(args[8]) # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain
+gsi_missing_threshold <- as.numeric(args[9]) # If more than this much GSI data is missing, consider GSI data invalid
+PofZ_threshold <- as.numeric(args[10]) # If the maximum PofZ is less than this, consider the result ambiguous
+Spring_PofZ_threshold <- PofZ_threshold # If the maximum PofZ is less than this, consider the result ambiguous
 # Parse OTS28 info file ----------------
 
 

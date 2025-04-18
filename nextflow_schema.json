@@ -33,6 +33,12 @@
                     "type": "string",
                     "description": "Trimmomatic trimming parameters",
                     "default": "LEADING:15 TRAILING:15 SLIDINGWINDOW:4:15 MINLEN:36"
+                },
+                "adapter_file": {
+                    "type": "string",
+                    "description": "Path to adapter FASTA file for Trimmomatic. If not specified, defaults to data/adapters/GTseq-PE.fa",
+                    "format": "file-path",
+                    "mimetype": "text/plain"
                 }
             }
         },

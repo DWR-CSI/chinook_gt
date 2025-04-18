@@ -15,6 +15,11 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// Set default values for thresholds if not specified in configs
+params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
+params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
+params.pofz_threshold = params.pofz_threshold ?: 0.8
+
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -96,6 +101,11 @@ workflow {
     ==============================================
     Panel Type : ${params.panel ?: 'Not specified'}
     References : ${params.reference ? 'User specified' : 'Auto-selected'}
+    
+    Rubias parameters:
+    OTS28 Missing Threshold : ${params.ots28_missing_threshold}
+    GSI Missing Threshold   : ${params.gsi_missing_threshold}
+    PofZ Threshold          : ${params.pofz_threshold}
     """
     // Resolve and validate references
     reference_files = resolveReferences(params)

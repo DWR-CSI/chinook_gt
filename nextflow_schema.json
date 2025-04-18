@@ -1,34 +1,101 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema",
-  "$id": "https://raw.githubusercontent.com/DWR-CSI/Chinook_gt/master/nextflow_schema.json",
-  "title": "Chinook pipeline parameters",
-  "description": "Schema for the Full GT pipeline parameters",
-  "type": "object",
-  "properties": {
-    "project": {
-      "type": "string",
-      "description": "Give a name to this project or run. No spaces or special characters.",
-      "default": "YourProject1"
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/DWR-CSI/Chinook_gt/master/nextflow_schema.json",
+    "title": "Chinook pipeline parameters",
+    "description": "Schema for the Full GT pipeline parameters",
+    "type": "object",
+    "definitions": {
+        "input_options": {
+            "title": "Input Options",
+            "type": "object",
+            "description": "Define where the pipeline should find input data.",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Give a name to this project or run. No spaces or special characters.",
+                    "default": "YourProject1",
+                    "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                "input": {
+                    "type": "string",
+                    "description": "Path to input FastQ files (must be paired-end)",
+                    "default": "az://seqera1/raw_data/ADPH_mushed/*_R{1,2}_concatenated.fastq.gz",
+                    "format": "path"
+                }
+            }
+        },
+        "trimmomatic_options": {
+            "title": "Trimmomatic Options",
+            "type": "object",
+            "description": "Options for adapter trimming with Trimmomatic.",
+            "properties": {
+                "trim_params": {
+                    "type": "string",
+                    "description": "Trimmomatic trimming parameters",
+                    "default": "LEADING:15 TRAILING:15 SLIDINGWINDOW:4:15 MINLEN:36"
+                }
+            }
+        },
+        "flash_options": {
+            "title": "FLASH2 Options",
+            "type": "object",
+            "description": "Options for merging paired reads with FLASH2.",
+            "properties": {
+                "min_overlap": {
+                    "type": "integer",
+                    "description": "Minimum overlap length for read merging",
+                    "default": 3,
+                    "minimum": 1
+                },
+                "max_overlap": {
+                    "type": "integer",
+                    "description": "Maximum overlap length for read merging",
+                    "default": 400,
+                    "minimum": 1
+                }
+            }
+        },
+        "threshold_options": {
+            "title": "Threshold Options",
+            "type": "object",
+            "description": "Options for threshold values used in genotype analysis.",
+            "properties": {
+                "ots28_missing_threshold": {
+                    "type": "number",
+                    "description": "OTS28 missing data threshold (default: 0.5). If less than this proportion of OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain.",
+                    "default": 0.5,
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "gsi_missing_threshold": {
+                    "type": "number",
+                    "description": "GSI missing data threshold. If more than this proportion of GSI data is missing, consider GSI data invalid.",
+                    "default": 0.6,
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "pofz_threshold": {
+                    "type": "number",
+                    "description": "PofZ ambiguity threshold. If the maximum Probability of Z-score (PofZ) is less than this value, consider the result ambiguous.",
+                    "default": 0.8,
+                    "minimum": 0,
+                    "maximum": 1
+                }
+            }
+        }
     },
-    "input": {
-      "type": "string",
-      "description": "Path to input FastQ files (must be paired-end)",
-      "default": "az://seqera1/raw_data/ADPH_mushed/*_R{1,2}_concatenated.fastq.gz"
-    },
-    "min_overlap": {
-      "type": "integer",
-      "description": "FLASH2: Minimum overlap length for read merging",
-      "default": 3
-    },
-    "max_overlap": {
-      "type": "integer",
-      "description": "FLASH2: Maximum overlap length for read merging",
-      "default": 400
-    },
-    "trim_params": {
-      "type": "string",
-      "description": "Trimmomatic: Trimming parameters",
-      "default": "LEADING:15 TRAILING:15 SLIDINGWINDOW:4:15 MINLEN:36"
-    }
-  }
+    "allOf": [
+        {
+            "$ref": "#/definitions/input_options"
+        },
+        {
+            "$ref": "#/definitions/trimmomatic_options"
+        },
+        {
+            "$ref": "#/definitions/flash_options"
+        },
+        {
+            "$ref": "#/definitions/threshold_options"
+        }
+    ]
 }

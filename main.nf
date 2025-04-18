@@ -15,7 +15,7 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// Set default values for new rubias parameters
+// Set default values for thresholds if not specified in configs
 params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
 params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
 params.pofz_threshold = params.pofz_threshold ?: 0.8

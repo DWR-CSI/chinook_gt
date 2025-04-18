@@ -151,12 +151,17 @@ workflow {
     
     // Define input channels
     def adapter_file
-    if (params.containsKey('adapter_file')) {
+    if (params.containsKey('adapter_file') && params.adapter_file) {
         adapter_file = params.adapter_file
     } else {
         adapter_file = "${projectDir}/data/adapters/GTseq-PE.fa"
         log.info "No adapter file provided, using default: ${adapter_file}"
     }
+    
+    if (!adapter_file) {
+        error "Adapter file path is empty or null. Please check the adapter_file parameter."
+    }
+    
     adapters_ch = channel.fromPath(adapter_file, checkIfExists: true)
 
     def locus_index_file

@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/DWR-CSI/Chinook_gt/master/nextflow_schema.json",
     "title": "Chinook pipeline parameters",
     "description": "Schema for the Full GT pipeline parameters",

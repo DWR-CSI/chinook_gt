@@ -101,6 +101,7 @@ workflow {
     ==============================================
     Panel Type : ${params.panel ?: 'Not specified'}
     References : ${params.reference ? 'User specified' : 'Auto-selected'}
+    Adapter File: ${params.adapter_file ? params.adapter_file : "${projectDir}/data/adapters/GTseq-PE.fa (default)"}
     
     Rubias parameters:
     OTS28 Missing Threshold : ${params.ots28_missing_threshold}
@@ -149,7 +150,14 @@ workflow {
         .set { reference_ch }
     
     // Define input channels
-    adapters_ch = channel.fromPath(params.adapter_file)
+    def adapter_file
+    if (params.containsKey('adapter_file')) {
+        adapter_file = params.adapter_file
+    } else {
+        adapter_file = "${projectDir}/data/adapters/GTseq-PE.fa"
+        log.info "No adapter file provided, using default: ${adapter_file}"
+    }
+    adapters_ch = channel.fromPath(adapter_file, checkIfExists: true)
 
     def locus_index_file
     if (params.containsKey('locus_index')) {

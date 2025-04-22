@@ -4,7 +4,7 @@
     "title": "Chinook pipeline parameters",
     "description": "Schema for the Full GT pipeline parameters",
     "type": "object",
-    "definitions": {
+    "$defs": {
         "input_options": {
             "title": "Input Options",
             "type": "object",
@@ -86,16 +86,16 @@
     },
     "allOf": [
         {
-            "$ref": "#/definitions/input_options"
+            "$ref": "#/$defs/input_options"
         },
         {
-            "$ref": "#/definitions/trimmomatic_options"
+            "$ref": "#/$defs/trimmomatic_options"
         },
         {
-            "$ref": "#/definitions/flash_options"
+            "$ref": "#/$defs/flash_options"
         },
         {
-            "$ref": "#/definitions/threshold_options"
+            "$ref": "#/$defs/threshold_options"
         }
     ]
 }

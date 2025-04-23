@@ -1,6 +1,7 @@
 process ANALYZE_IDXSTATS {
     tag "Analyzing idxstats and loci distribution"
     label 'process_small'
+    errorStrategy 'ignore'
     publishDir "${params.outdir}/${params.project}/idxstats_analysis", mode: 'copy'
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

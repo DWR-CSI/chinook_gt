@@ -87,7 +87,41 @@ process ANALYZE_IDXSTATS {
     ggsave("reads_per_individual.pdf", plot_reads_by_ind, width = 12, height = 8)
     ggsave("reads_per_locus.pdf", plot_reads_by_locus, width = 12, height = 8)
     
-    # Export matrix
+    # Check for duplicate sample IDs before exporting
+    duplicate_samples <- idx_df %>% 
+      select(ind, loc) %>%
+      group_by(ind, loc) %>%
+      summarise(n = n(), .groups = "drop") %>%
+      filter(n > 1) %>%
+      arrange(ind, loc)
+    
+    # If duplicates found, write them to a file and throw an error
+    if (nrow(duplicate_samples) > 0) {
+      unique_duplicated_inds <- duplicate_samples %>%
+        select(ind) %>%
+        distinct() %>%
+        pull(ind)
+      
+      # Write duplicates to a file for reference
+      write.csv(duplicate_samples, "duplicate_samples.csv", row.names = FALSE)
+      
+      # Generate error message with duplicated sample IDs
+      error_message <- paste0(
+        "ERROR: Duplicate sample IDs detected for the following samples: ",
+        paste(unique_duplicated_inds, collapse = ", "),
+        ". See duplicate_samples.csv for details. This likely happened because multiple input files were reduced to the same sample ID during name extraction. Please use unique sample IDs or modify the sample name extraction function."
+      )
+      
+      # Write error to file for Nextflow to capture
+      sink("error_message.txt")
+      cat(error_message)
+      sink()
+      
+      # Stop execution with error code
+      stop(error_message)
+    }
+    
+    # Export matrix (only runs if no duplicates are found)
     matrix_df <- idx_df %>%
       select(-len, -unmapd) %>%
       spread(ind, reads)

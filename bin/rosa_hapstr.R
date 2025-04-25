@@ -8,10 +8,10 @@ library(vcfR)
 
 #' Calculate run timing scores and make genotype calls
 #' @param ptypes Dataframe containing haplotype strings and counts
-#' @param threshold_het Threshold for calling heterozygous (default 0.3)
-#' @param min_markers Minimum number of scored markers required (default 7)
+#' @param threshold_het Threshold for calling heterozygous (default 0.5)
+#' @param min_markers Minimum number of scored markers required (default 3 and 2 for EL and W respectively)
 #' @return Dataframe with run timing calls and confidence scores
-analyze_run_timing <- function(ptypes, threshold_het = 0.5, min_EL_markers = 5, min_W_markers = 2) {
+analyze_run_timing <- function(ptypes, threshold_het = 0.5, min_EL_markers = 3, min_W_markers = 2) {
     ptypes %>%
         mutate(
             # Calculate total markers scored

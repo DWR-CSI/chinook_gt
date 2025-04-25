@@ -94,7 +94,11 @@ unks <- unks %>%
 ots28_info <- read_tsv(ots28_info_file) %>%
   mutate(
     indiv = clean_sample_name(indiv),
-    RoSA = if_else(RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold, "Intermediate", RoSA)
+    RoSA = case_when(
+      ots28_missing >= ots28_missing_threshold ~ "Uncertain",
+      RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold ~ "Intermediate",
+      TRUE ~ RoSA
+    )
   ) %>%
   filter(indiv %in% unks$indiv) %>%
   select(indiv, RoSA, ots28_missing)

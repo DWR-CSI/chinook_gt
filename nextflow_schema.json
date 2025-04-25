@@ -62,8 +62,8 @@
             "properties": {
                 "ots28_missing_threshold": {
                     "type": "number",
-                    "description": "OTS28 missing data threshold (default: 0.5). If less than this proportion of OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain.",
-                    "default": 0.5,
+                    "description": "OTS28 missing data threshold (default: 0.7). If less than this proportion of OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain.",
+                    "default": 0.7,
                     "minimum": 0,
                     "maximum": 1
                 },

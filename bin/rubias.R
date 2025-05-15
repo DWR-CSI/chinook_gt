@@ -72,7 +72,7 @@ unks_alphageno <- args[7] %>%
   rename(collection = group, indiv = indiv.ID) %>%
   rename_all(~ gsub("-", ".", .))
 
-ots28_missing_threshold <- as.numeric(args[8]) # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain
+ots28_missing_threshold <- as.numeric(args[8]) * 100 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain. Multiplied by 100 to get percentage
 gsi_missing_threshold <- as.numeric(args[9]) # If more than this much GSI data is missing, consider GSI data invalid
 PofZ_threshold <- as.numeric(args[10]) # If the maximum PofZ is less than this, consider the result ambiguous
 Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls

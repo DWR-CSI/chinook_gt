@@ -19,6 +19,7 @@ nextflow.enable.dsl = 2
 params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
 params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
 params.pofz_threshold = params.pofz_threshold ?: 0.8
+params.concat_all_reads = params.concat_all_reads ?: false
 
 
 // Import modules
@@ -241,35 +242,45 @@ workflow {
     
     TRIMMOMATIC_SINGLE(ch_single_adapters, params.trim_params)
 
-    // Collect all available reads per sample for concatenation
-    ch_all_reads_per_sample = Channel.empty()
-    
-    // Add merged reads from FLASH2
-    ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
-        FLASH2.out.merged
-    )
-    
-    // Add unmerged reads from FLASH2 - transpose to separate paired files
-    ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
-        FLASH2.out.unmerged.transpose()
-    )
-    
-    // Add unpaired reads from TRIMMOMATIC - transpose to separate files
-    ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
-        TRIMMOMATIC.out.trimmed_unpaired.transpose()
-    )
-    
-    // Add single-end trimmed reads
-    ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
-        TRIMMOMATIC_SINGLE.out.trimmed
-    )
-    
-    // Group all files by sample_id and concatenate
-    ch_grouped_reads = ch_all_reads_per_sample
-        .groupTuple(by: 0)
-    
-    CONCAT_READS(ch_grouped_reads)
-    ch_processed_reads = CONCAT_READS.out.concatenated
+    // Choose read processing approach based on parameter
+    if (params.concat_all_reads) {
+        // Collect all available reads per sample for concatenation
+        ch_all_reads_per_sample = Channel.empty()
+        
+        // Add merged reads from FLASH2
+        ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
+            FLASH2.out.merged
+        )
+        
+        // Add unmerged reads from FLASH2 - transpose to separate paired files
+        ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
+            FLASH2.out.unmerged.transpose()
+        )
+        
+        // Add unpaired reads from TRIMMOMATIC - transpose to separate files
+        ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
+            TRIMMOMATIC.out.trimmed_unpaired.transpose()
+        )
+        
+        // Add single-end trimmed reads
+        ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
+            TRIMMOMATIC_SINGLE.out.trimmed
+        )
+        
+        // Group all files by sample_id and concatenate
+        ch_grouped_reads = ch_all_reads_per_sample
+            .groupTuple(by: 0)
+        
+        CONCAT_READS(ch_grouped_reads)
+        ch_processed_reads = CONCAT_READS.out.concatenated
+    } else {
+        // Original approach - only merged and single-end reads
+        ch_processed_reads = Channel.empty()
+        ch_processed_reads = ch_processed_reads.mix(
+            FLASH2.out.merged,
+            TRIMMOMATIC_SINGLE.out.trimmed
+        )
+    }
     
 
     bwa_input = ch_processed_reads.combine(reference_ch)

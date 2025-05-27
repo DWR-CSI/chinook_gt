@@ -36,6 +36,7 @@ include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
 include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
 include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
 include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
+include { CONCAT_READS } from './modules/concat_reads.nf'
 
 // Functions
 
@@ -240,12 +241,35 @@ workflow {
     
     TRIMMOMATIC_SINGLE(ch_single_adapters, params.trim_params)
 
-    // Merge processed reads for downstream analysis
-    ch_processed_reads = Channel.empty()
-    ch_processed_reads = ch_processed_reads.mix(
-        FLASH2.out.merged,
+    // Collect all available reads per sample for concatenation
+    ch_all_reads_per_sample = Channel.empty()
+    
+    // Add merged reads from FLASH2
+    ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
+        FLASH2.out.merged
+    )
+    
+    // Add unmerged reads from FLASH2 - transpose to separate paired files
+    ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
+        FLASH2.out.unmerged.transpose()
+    )
+    
+    // Add unpaired reads from TRIMMOMATIC - transpose to separate files
+    ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
+        TRIMMOMATIC.out.trimmed_unpaired.transpose()
+    )
+    
+    // Add single-end trimmed reads
+    ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
         TRIMMOMATIC_SINGLE.out.trimmed
     )
+    
+    // Group all files by sample_id and concatenate
+    ch_grouped_reads = ch_all_reads_per_sample
+        .groupTuple(by: 0)
+    
+    CONCAT_READS(ch_grouped_reads)
+    ch_processed_reads = CONCAT_READS.out.concatenated
     
 
     bwa_input = ch_processed_reads.combine(reference_ch)

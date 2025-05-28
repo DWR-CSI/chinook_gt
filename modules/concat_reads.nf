@@ -1,6 +1,8 @@
 process CONCAT_READS {
     tag "Concatenating reads for ${sample_id}"
-    container 'alpine:latest'
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://depot.galaxyproject.org/singularity/coreutils:9.5' :
+        'quay.io/biocontainers/coreutils:9.5' }"
     label 'process_small'
     
     publishDir "${params.outdir}/${params.project}/concatenated", mode: 'copy'

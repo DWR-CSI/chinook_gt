@@ -15,6 +15,6 @@ process CONCAT_READS {
 
     script:
     """
-    zcat ${read_files.join(' ')} | gzip > ${sample_id}_all_reads.fastq.gz
+    cat ${read_files.join(' ')} ${sample_id}_all_reads.fastq.gz
     """
 }

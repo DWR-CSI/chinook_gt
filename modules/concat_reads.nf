@@ -1,6 +1,6 @@
 process CONCAT_READS {
     tag "Concatenating reads for ${sample_id}"
-    container 'alpine:latest'
+    container 'docker.io/nfcore/base:2.1'
     label 'process_small'
     
     publishDir "${params.outdir}/${params.project}/concatenated", mode: 'copy'

@@ -1,8 +1,6 @@
 process CONCAT_READS {
     tag "Concatenating reads for ${sample_id}"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/coreutils:9.5' :
-        'quay.io/biocontainers/coreutils:9.5' }"
+    container 'alpine:latest'
     label 'process_small'
     
     publishDir "${params.outdir}/${params.project}/concatenated", mode: 'copy'
@@ -15,6 +13,6 @@ process CONCAT_READS {
 
     script:
     """
-    cat ${read_files.join(' ')} ${sample_id}_all_reads.fastq.gz
+    cat ${read_files.join(' ')} >${sample_id}_all_reads.fastq.gz
     """
 }

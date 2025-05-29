@@ -55,6 +55,18 @@
                 }
             }
         },
+        "processing_options": {
+            "title": "Processing Options",
+            "type": "object",
+            "description": "Options for read processing and data handling.",
+            "properties": {
+                "concat_all_reads": {
+                    "type": "boolean",
+                    "description": "Concatenate all available reads per sample (merged, unmerged, and unpaired) for BWA mapping. If false, uses only merged and single-end reads (original behavior).",
+                    "default": false
+                }
+            }
+        },
         "threshold_options": {
             "title": "Threshold Options",
             "type": "object",
@@ -93,6 +105,9 @@
         },
         {
             "$ref": "#/$defs/flash_options"
+        },
+        {
+            "$ref": "#/$defs/processing_options"
         },
         {
             "$ref": "#/$defs/threshold_options"

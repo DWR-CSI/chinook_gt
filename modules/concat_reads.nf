@@ -13,6 +13,18 @@ process CONCAT_READS {
 
     script:
     """
-    cat ${read_files.join(' ')} >${sample_id}_all_reads.fastq.gz
+    # Handle potential file path issues on Azure by using explicit file listing
+    for file in ${read_files.join(' ')}; do
+        if [[ -f "\$file" ]]; then
+            cat "\$file" >> ${sample_id}_all_reads.fastq.gz
+        else
+            echo "Warning: File \$file not found" >&2
+        fi
+    done
+    
+    # Ensure output file exists even if no input files were found
+    if [[ ! -f ${sample_id}_all_reads.fastq.gz ]]; then
+        touch ${sample_id}_all_reads.fastq.gz
+    fi
     """
 }

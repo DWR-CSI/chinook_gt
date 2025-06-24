@@ -153,7 +153,8 @@ hap_final %>%
 hap2col <- hap_final %>%
   select(group, indiv.ID, locus, rank, haplo) %>%
   unite(tmp, locus:rank, sep = ".") %>%
-  spread(tmp, haplo)
+  spread(tmp, haplo) %>%
+  mutate(indiv.ID = str_remove("_$"))
 hap2col[is.na(hap2col)] <- na_string_var
 hap2col_output <- stringr::str_c(project_name, "_", format(Sys.Date(), "%Y%m%d"), "_genotypes", ".txt")
 write_tsv(hap2col, file = hap2col_output)

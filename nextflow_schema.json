@@ -94,6 +94,51 @@
                     "maximum": 1
                 }
             }
+        },
+        "sequoia_options": {
+            "title": "Sequoia Options",
+            "type": "object",
+            "description": "Sequoia for parentage-based tagging (PBT) analysis.",
+            "properties": {
+                "use_sequoia": {
+                    "type": "boolean",
+                    "description": "Enable Sequoia for PBT analysis. If false, the pipeline will not run Sequoia.",
+                    "default": true
+                },
+                "sequoia_mode": {
+                    "type": "string",
+                    "description": "Sequoia mode for PBT analysis. Options are 'par' for parentage analysis or 'ped' for pedigree analysis.",
+                    "default": "par",
+                    "enum": ["par", "ped"]
+                },
+                "par_geno_input": {
+                    "type": "string",
+                    "description": "Path to parent genotype file (Sequoia formatted).",
+                    "default": "az://seqera1/",
+                    "format": "path"
+                },
+                "par_lh_metadata": {
+                    "type": "string",
+                    "description": "Path to parent metadata (lifehistory) file (Sequoia formatted).",
+                    "default": "az://seqera1/",
+                    "format": "path"
+                },
+                "offspring_birthyear": {
+                    "type": "string",
+                    "description": "Birth year of the offspring for Sequoia analysis.",
+                    "default": "unknown"
+                },
+                "offspring_minBY": {
+                    "type": "string",
+                    "description": "Minimum birth year for offspring in Sequoia analysis.",
+                    "default": "unknown"
+                },
+                "offspring_maxBY": {
+                    "type": "string",
+                    "description": "Maximum birth year for offspring in Sequoia analysis. If unknown, set to current year.",
+                    "default": "2025"
+                }
+            }
         }
     },
     "allOf": [
@@ -111,6 +156,9 @@
         },
         {
             "$ref": "#/$defs/threshold_options"
+        },
+        {
+            "$ref": "#/$defs/sequoia_options"
         }
     ]
 }

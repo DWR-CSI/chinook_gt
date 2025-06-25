@@ -1,6 +1,6 @@
 process RUN_SEQUOIA {
     tag "Running sequoia"
-    container "docker.io/bnguyen29/r-rubias:1.0.4"
+    // container "docker.io/bnguyen29/r-rubias:1.0.4" // TO-DO: needs to be replaced with sequoia container when available
     label 'process_high'
     publishDir "${params.outdir}/${params.project}/sequoia", mode: 'copy'
 
@@ -22,6 +22,6 @@ process RUN_SEQUOIA {
 
     script:
     """
-    run_sequoia.R ${params.sequoia_mode} ${parent_geno} ${parent_lifehistory} ${offspring_geno} ${offspring_BY} ${offspring_minBY} ${offspring_maxBY} ${offspring_max_age} ${params.project}
+    run_sequoia.R ${params.sequoia_mode} ${parent_geno} ${parent_lifehistory} ${offspring_geno} ${offspring_BY} ${offspring_minBY} ${offspring_maxBY} ${offspring_max_age} ${params.project} ${params.sequoia_missing_threshold}
     """
 }

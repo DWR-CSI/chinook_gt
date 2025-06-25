@@ -21,7 +21,8 @@ params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
 params.pofz_threshold = params.pofz_threshold ?: 0.8
 params.concat_all_reads = params.concat_all_reads ?: false
 params.use_sequoia = params.use_sequoia ?: false
-
+params.sequoia_mode = params.sequoia_mode ?: 'par'
+params.sequoia_missing_threshold = params.sequoia_missing_threshold ?: 0.5
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -376,8 +377,8 @@ workflow {
 
     // Run PBT analysis
     if (params.use_sequoia) {
-        par_geno_file = fromPath(params.parent_geno_input, checkIfExists: true)
-        par_lh_file = fromPath(params.parent_lifehistory, checkIfExists: true)
+        par_geno_file = Channel.fromPath(params.parent_geno_input, checkIfExists: true)
+        par_lh_file = Channel.fromPath(params.parent_lifehistory, checkIfExists: true)
         RUN_SEQUOIA(par_geno_file, par_lh_file, HAP2GENO.out.geno, params.offspring_BY, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
     }
 }

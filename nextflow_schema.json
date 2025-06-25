@@ -118,13 +118,13 @@
                     "minimum": 0,
                     "maximum": 1
                 },
-                "par_geno_input": {
+                "parent_geno_input": {
                     "type": "string",
                     "description": "Path to parent genotype file (Sequoia formatted).",
                     "default": "az://seqera1/",
                     "format": "path"
                 },
-                "par_lh_metadata": {
+                "parent_lifehistory": {
                     "type": "string",
                     "description": "Path to parent metadata (lifehistory) file (Sequoia formatted).",
                     "default": "az://seqera1/",
@@ -148,7 +148,7 @@
                 "offspring_max_age": {
                     "type": "integer",
                     "description": "Maximum age of the offspring in the dataset.",
-                    "default": 7,
+                    "default": 1,
                     "minimum": 0
                 }
             }

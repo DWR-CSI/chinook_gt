@@ -379,6 +379,6 @@ workflow {
     if (params.use_sequoia) {
         par_geno_file = Channel.fromPath(params.parent_geno_input, checkIfExists: true)
         par_lh_file = Channel.fromPath(params.parent_lifehistory, checkIfExists: true)
-        RUN_SEQUOIA(par_geno_file, par_lh_file, HAP2GENO.out.geno, params.offspring_BY, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
+        RUN_SEQUOIA(par_geno_file, par_lh_file, HAP2GENO.out.geno, params.offspring_birthyear, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
     }
 }

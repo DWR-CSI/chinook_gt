@@ -261,7 +261,7 @@ offspring_genotypes <- offspring_genotypes_path %>%
 # ==============================================================================
 # TESTING MODE - Set to TRUE to use hardcoded test data instead of command line args
 # ==============================================================================
-TESTING_MODE <- TRUE
+TESTING_MODE <- FALSE
 
 if (TESTING_MODE) {
     cat("Running in TESTING MODE - using hardcoded test data\n")

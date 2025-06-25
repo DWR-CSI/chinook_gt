@@ -260,7 +260,8 @@ reference_parental_lifehistory <- ref_lifehistory_path %>%
         Sex = col_integer(),
         BirthYear = col_integer(),
         BY.min = col_integer(),
-        BY.max = col_integer()
+        BY.max = col_integer(),
+        Year.last = col_integer()
     ))
 
 offspring_genotypes <- offspring_genotypes_path %>%
@@ -295,7 +296,8 @@ if (TESTING_MODE) {
                 Sex = col_integer(),
                 BirthYear = col_integer(),
                 BY.min = col_integer(),
-                BY.max = col_integer()
+                BY.max = col_integer(),
+                Year.last = col_integer()
             )
         ) %>%
         mutate(
@@ -321,7 +323,8 @@ offspring_lh <- tibble(
     Sex = as.integer(3), # Unknown
     BirthYear = offspring_birthyear,
     BY.min = offspring_minBY,
-    BY.max = offspring_maxBY
+    BY.max = offspring_maxBY,
+    Year.last = NA_integer_
 ) %>%
     mutate(
         BY.min = case_when(
@@ -403,4 +406,16 @@ saveRDS(SeqOUT, paste0(project_name, "_sequoia_output.rds"))
 
 parentage_results <- SeqOUT$Pedigree
 
-write_tsv(parentage_results, paste0(project_name, "_parentage_results.txt"))
+if (!is.null(parentage_results)) {
+    write_tsv(parentage_results, paste0(project_name, "_parentage_results.txt"))
+} else {
+    cat("No pedigree results - likely running in preprocessing mode only\n")
+    # Create empty parentage results file to satisfy output requirements
+    empty_parentage <- data.frame(
+        ID = character(0),
+        Dam = character(0),
+        Sire = character(0),
+        stringsAsFactors = FALSE
+    )
+    write_tsv(empty_parentage, paste0(project_name, "_parentage_results.txt"))
+}

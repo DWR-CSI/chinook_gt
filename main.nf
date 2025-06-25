@@ -20,6 +20,7 @@ params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
 params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
 params.pofz_threshold = params.pofz_threshold ?: 0.8
 params.concat_all_reads = params.concat_all_reads ?: false
+params.use_sequoia = params.use_sequoia ?: false
 
 
 // Import modules
@@ -38,6 +39,7 @@ include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
 include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
 include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
 include { CONCAT_READS } from './modules/concat_reads.nf'
+include { RUN_SEQUOIA } from './modules/sequoia.nf'
 
 // Functions
 
@@ -371,4 +373,11 @@ workflow {
 
     // Run Rubias analyses
     RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, HAP2GENO.out.numgeno, baseline_ch, params.panel.toLowerCase(), HAP2GENO.out.geno)
+
+    // Run PBT analysis
+    if (params.use_sequoia) {
+        par_geno_file = fromPath(params.parent_geno_input, checkIfExists: true)
+        par_lh_file = fromPath(params.parent_lifehistory, checkIfExists: true)
+        RUN_SEQUOIA(par_geno_file, par_lh_file, HAP2GENO.out.geno, params.offspring_BY, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
+    }
 }

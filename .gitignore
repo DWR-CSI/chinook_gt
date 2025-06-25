@@ -6,5 +6,5 @@ work/*
 *.vcf
 *Zone*
 output/*
-*.log.*
+*.log*
 .vscode/*

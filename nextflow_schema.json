@@ -107,9 +107,16 @@
                 },
                 "sequoia_mode": {
                     "type": "string",
-                    "description": "Sequoia mode for PBT analysis. Options are 'par' for parentage analysis or 'ped' for pedigree analysis.",
+                    "description": "Sequoia mode for PBT analysis. Options are 'par' for parentage analysis or 'ped' for full pedigree analysis (takes much longer).",
                     "default": "par",
                     "enum": ["par", "ped"]
+                },
+                "sequoia_missing_threshold": {
+                    "type": "number",
+                    "description": "Sequoia missing data threshold. If more than this proportion of data is missing, consider the result invalid. Set to 0.2 for conservative cut-off.",
+                    "default": 0.5,
+                    "minimum": 0,
+                    "maximum": 1
                 },
                 "par_geno_input": {
                     "type": "string",
@@ -137,6 +144,12 @@
                     "type": "string",
                     "description": "Maximum birth year for offspring in Sequoia analysis. If unknown, set to current year.",
                     "default": "2025"
+                },
+                "offspring_max_age": {
+                    "type": "integer",
+                    "description": "Maximum age of the offspring in the dataset.",
+                    "default": 7,
+                    "minimum": 0
                 }
             }
         }

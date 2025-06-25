@@ -15,5 +15,7 @@ reports:
     display: "Problematic Loci Summary"
   idxstats_analysis/sample_statistics.csv:
     display: "Sample Sequencing Statistics"
+  sequoia/*_parentage_results.txt:
+    display: "PBT Results"
 
 

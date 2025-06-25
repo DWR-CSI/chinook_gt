@@ -17,4 +17,13 @@ ots28_baseline: "data/baselines/full/RoSA_baseline_partial_infile.txt"
 n_loci: 204
 rubias_show_missing_data: "TRUE"
 panel: "full"
-concat_all_reads: true
+concat_all_reads: false
+use_sequoia: TRUE
+sequoia_mode: "par"
+sequoia_missing_threshold: 0.5
+parent_geno_input: "examples/PBT/FRH2024_reference_genotypes.txt"
+parent_lifehistory: "examples/PBT/FRH2024_reference_lifehistory.txt"
+offspring_birthyear: "unknown"
+offspring_minBY: "unknown"
+offspring_maxBY: 2025
+offspring_max_age: 8

@@ -22,6 +22,6 @@ process RUN_SEQUOIA {
 
     script:
     """
-    run_sequoia.R ${params.sequoia_mode} ${parent_geno} ${parent_lifehistory} ${offspring_geno} ${offspring_BY} ${offspring_minBY} ${offspring_maxBY} ${offspring_max_age} ${params.project} ${params.sequoia_missing_threshold}
+    run_sequoia.R ${params.sequoia_mode} ${parent_geno} ${parent_lifehistory} ${offspring_geno} ${offspring_BY} ${offspring_minBY} ${offspring_maxBY} ${offspring_max_age} ${params.project} ${params.sequoia_missing_threshold} ${params.species_min_repro_age} ${params.species_max_repro_age}
     """
 }

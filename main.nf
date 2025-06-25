@@ -23,6 +23,8 @@ params.concat_all_reads = params.concat_all_reads ?: false
 params.use_sequoia = params.use_sequoia ?: false
 params.sequoia_mode = params.sequoia_mode ?: 'par'
 params.sequoia_missing_threshold = params.sequoia_missing_threshold ?: 0.5
+params.species_max_repro_age = params.species_max_repro_age ?: 8
+params.species_min_repro_age = params.species_min_repro_age ?: 1
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -111,6 +113,13 @@ workflow {
     OTS28 Missing Threshold : ${params.ots28_missing_threshold}
     GSI Missing Threshold   : ${params.gsi_missing_threshold}
     PofZ Threshold          : ${params.pofz_threshold}
+    Concatenate All Reads   : ${params.concat_all_reads}
+    Use Sequoia             : ${params.use_sequoia}
+    Sequoia Mode            : ${params.sequoia_mode}
+    Sequoia Missing Threshold: ${params.sequoia_missing_threshold}
+    Species Max Repro Age   : ${params.species_max_repro_age}
+    Species Min Repro Age   : ${params.species_min_repro_age}
+    ==============================================
     """
     // Resolve and validate references
     reference_files = resolveReferences(params)

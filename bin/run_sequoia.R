@@ -206,8 +206,8 @@ convert_to_major_allele_counts <- function(genotype_data, allele_dictionary) {
 
 # Parse and setup command line arguments
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 9) {
-    stop("Usage: run_sequoia.R <sequoia_mode> <ref_genotypes> <ref_lifehistory> <offspring_genotypes> <offspring_birthyear> <offspring_minBY> <offspring_maxBY> <max_age> <project_name> [missing_threshold]")
+if (length(args) < 12) {
+    stop("Usage: run_sequoia.R <sequoia_mode> <ref_genotypes> <ref_lifehistory> <offspring_genotypes> <offspring_birthyear> <offspring_minBY> <offspring_maxBY> <max_age> <project_name> [missing_threshold] <species_min_repro_age> <species_max_repro_age>")
 }
 
 # Validate and parse arguments
@@ -218,12 +218,27 @@ offspring_genotypes_path <- args[4]
 offspring_birthyear <- safe_as_integer(args[5], "offspring_birthyear")
 offspring_minBY <- safe_as_integer(args[6], "offspring_minBY")
 offspring_maxBY <- safe_as_integer(args[7], "offspring_maxBY")
-max_age <- safe_as_integer(args[8], "max_age", allow_na = FALSE)
+max_age <- safe_as_integer(args[8], "max_age", allow_na = FALSE) # max age of offspring
 project_name <- args[9]
 missing_thresholds <- if (length(args) >= 10) {
     safe_as_numeric(args[10], "missing_threshold", 0.5)
 } else {
     0.5
+}
+species_min_repro_age <- args[11] %>%
+    as.integer()
+species_max_repro_age <- args[12] %>%
+    as.integer()
+
+# Validate reproductive age parameters
+if (is.na(species_min_repro_age) || is.na(species_max_repro_age)) {
+    stop("species_min_repro_age and species_max_repro_age must be valid integers")
+}
+if (species_min_repro_age >= species_max_repro_age) {
+    stop("species_min_repro_age must be less than species_max_repro_age")
+}
+if (species_min_repro_age < 0 || species_max_repro_age < 0) {
+    stop("Reproductive ages must be non-negative")
 }
 
 # Validate file existence
@@ -375,6 +390,11 @@ SeqOUT <- sequoia(
     LifeHistData = final_lh,
     Err = 0.005,
     Module = sequoia_mode,
+    args.AP = list(
+        Discrete = TRUE,
+        MinAgeParent = species_min_repro_age, # Minimum age of parents
+        MaxAgeParent = species_max_repro_age # Maximum age of parents
+    ),
     quiet = "verbose",
     Plot = FALSE
 )

@@ -150,6 +150,18 @@
                     "description": "Maximum age of the offspring in the dataset.",
                     "default": 1,
                     "minimum": 0
+                },
+                "species_max_repro_age": {
+                    "type": "integer",
+                    "description": "Maximum reproductive age of the species in the dataset.",
+                    "default": 6,
+                    "minimum": 0
+                },
+                "species_min_repro_age": {
+                    "type": "integer",
+                    "description": "Minimum reproductive age of the species in the dataset.",
+                    "default": 1,
+                    "minimum": 0
                 }
             }
         }

@@ -1,6 +1,6 @@
 process RUN_SEQUOIA {
     tag "Parentage Analysis: sequoia"
-    // container "docker.io/bnguyen29/r-rubias:1.0.4" // TO-DO: needs to be replaced with sequoia container when available
+    container "docker.io/bnguyen29/sequoia:latest"
     label 'process_high'
     publishDir "${params.outdir}/${params.project}/sequoia", mode: 'copy'
 

@@ -1,5 +1,5 @@
 process RUN_RUBIAS {
-    tag "Running RUBIAS"
+    tag "Genetic stock assignment: RUBIAS"
     container "docker.io/bnguyen29/r-rubias:1.0.4"
     label 'process_high'
     publishDir "${params.outdir}/${params.project}/rubias", mode: 'copy'

@@ -20,7 +20,11 @@ params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
 params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
 params.pofz_threshold = params.pofz_threshold ?: 0.8
 params.concat_all_reads = params.concat_all_reads ?: false
-
+params.use_sequoia = params.use_sequoia ?: false
+params.sequoia_mode = params.sequoia_mode ?: 'par'
+params.sequoia_missing_threshold = params.sequoia_missing_threshold ?: 0.5
+params.species_max_repro_age = params.species_max_repro_age ?: 8
+params.species_min_repro_age = params.species_min_repro_age ?: 1
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -38,6 +42,7 @@ include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
 include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
 include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
 include { CONCAT_READS } from './modules/concat_reads.nf'
+include { RUN_SEQUOIA } from './modules/sequoia.nf'
 
 // Functions
 
@@ -108,6 +113,13 @@ workflow {
     OTS28 Missing Threshold : ${params.ots28_missing_threshold}
     GSI Missing Threshold   : ${params.gsi_missing_threshold}
     PofZ Threshold          : ${params.pofz_threshold}
+    Concatenate All Reads   : ${params.concat_all_reads}
+    Use Sequoia             : ${params.use_sequoia}
+    Sequoia Mode            : ${params.sequoia_mode}
+    Sequoia Missing Threshold: ${params.sequoia_missing_threshold}
+    Species Max Repro Age   : ${params.species_max_repro_age}
+    Species Min Repro Age   : ${params.species_min_repro_age}
+    ==============================================
     """
     // Resolve and validate references
     reference_files = resolveReferences(params)
@@ -371,4 +383,11 @@ workflow {
 
     // Run Rubias analyses
     RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, HAP2GENO.out.numgeno, baseline_ch, params.panel.toLowerCase(), HAP2GENO.out.geno)
+
+    // Run PBT analysis
+    if (params.use_sequoia) {
+        par_geno_file = Channel.fromPath(params.parent_geno_input, checkIfExists: true)
+        par_lh_file = Channel.fromPath(params.parent_lifehistory, checkIfExists: true)
+        RUN_SEQUOIA(par_geno_file, par_lh_file, HAP2GENO.out.geno, params.offspring_birthyear, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
+    }
 }

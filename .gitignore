@@ -1,4 +1,4 @@
-.nextflow*
+.nextflow/*
 timeline*
 trace*
 mount_*.sh
@@ -6,3 +6,5 @@ work/*
 *.vcf
 *Zone*
 output/*
+*.log*
+.vscode/*

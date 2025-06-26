@@ -94,6 +94,76 @@
                     "maximum": 1
                 }
             }
+        },
+        "sequoia_options": {
+            "title": "Sequoia Options",
+            "type": "object",
+            "description": "Sequoia for parentage-based tagging (PBT) analysis.",
+            "properties": {
+                "use_sequoia": {
+                    "type": "boolean",
+                    "description": "Enable Sequoia for PBT analysis. If false, the pipeline will not run Sequoia.",
+                    "default": true
+                },
+                "sequoia_mode": {
+                    "type": "string",
+                    "description": "Sequoia mode for PBT analysis. Options are 'par' for parentage analysis or 'ped' for full pedigree analysis (takes much longer).",
+                    "default": "par",
+                    "enum": ["par", "ped"]
+                },
+                "sequoia_missing_threshold": {
+                    "type": "number",
+                    "description": "Sequoia missing data threshold. If more than this proportion of data is missing, consider the result invalid. Set to 0.2 for conservative cut-off.",
+                    "default": 0.5,
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "parent_geno_input": {
+                    "type": "string",
+                    "description": "Path to parent genotype file (Sequoia formatted).",
+                    "default": "az://seqera1/reference/full_panel/PBT/FRH2024_reference_genotypes.txt",
+                    "format": "path"
+                },
+                "parent_lifehistory": {
+                    "type": "string",
+                    "description": "Path to parent metadata (lifehistory) file (Sequoia formatted).",
+                    "default": "az://seqera1/reference/full_panel/PBT/FRH2024_reference_lifehistory.txt",
+                    "format": "path"
+                },
+                "offspring_birthyear": {
+                    "type": "string",
+                    "description": "Birth year of the offspring for Sequoia analysis.",
+                    "default": "unknown"
+                },
+                "offspring_minBY": {
+                    "type": "string",
+                    "description": "Minimum birth year for offspring in Sequoia analysis.",
+                    "default": "unknown"
+                },
+                "offspring_maxBY": {
+                    "type": "string",
+                    "description": "Maximum birth year for offspring in Sequoia analysis. If unknown, set to current year.",
+                    "default": "2025"
+                },
+                "offspring_max_age": {
+                    "type": "integer",
+                    "description": "Maximum age of the offspring in the dataset.",
+                    "default": 1,
+                    "minimum": 0
+                },
+                "species_max_repro_age": {
+                    "type": "integer",
+                    "description": "Maximum reproductive age of the species in the dataset.",
+                    "default": 6,
+                    "minimum": 0
+                },
+                "species_min_repro_age": {
+                    "type": "integer",
+                    "description": "Minimum reproductive age of the species in the dataset.",
+                    "default": 1,
+                    "minimum": 0
+                }
+            }
         }
     },
     "allOf": [
@@ -111,6 +181,9 @@
         },
         {
             "$ref": "#/$defs/threshold_options"
+        },
+        {
+            "$ref": "#/$defs/sequoia_options"
         }
     ]
 }

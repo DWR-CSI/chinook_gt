@@ -203,13 +203,14 @@ repunit_calls <- all_full_mix_results %>%
   mutate(
     fraction_missing = n_miss_loci / (n_miss_loci + n_non_miss_loci),
     final_call = case_when(
-      (fraction_missing > gsi_missing_threshold) & (RoSA == "Late") ~ "Fall / Late Fall",
-      (fraction_missing > gsi_missing_threshold) & (RoSA == "Early") ~ "Spring / Winter",
-      fraction_missing > gsi_missing_threshold ~ "Missing Data",
-      (Prob_repunit < PofZ_threshold) & (RoSA == "Early") ~ "Mixed Spring",
-      (Prob_repunit < PofZ_threshold) & (RoSA == "Late") ~ "Mixed Fall / Late Fall",
-      Prob_repunit < PofZ_threshold ~ "Mixed",
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
+      #(fraction_missing > gsi_missing_threshold) & (RoSA == "Late") ~ "Fall / Late Fall",
+      #(fraction_missing > gsi_missing_threshold) & (RoSA == "Early") ~ "Spring / Winter",
+      #fraction_missing > gsi_missing_threshold ~ "Missing Data",
+      #(Prob_repunit < PofZ_threshold) & (RoSA == "Early") ~ "Mixed Spring",
+      #(Prob_repunit < PofZ_threshold) & (RoSA == "Late") ~ "Mixed Fall / Late Fall",
+      #Prob_repunit < PofZ_threshold ~ "Mixed",
+      fraction_missing > gsi_missing_threshold ~ NA_character_,
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "Spring",
       (RoSA == "Late") & (repunit == "spring") ~ "Fall",
       (fraction_missing < gsi_missing_threshold) ~ repunit,
       TRUE ~ "Assignment Error"

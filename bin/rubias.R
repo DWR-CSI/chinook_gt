@@ -75,7 +75,7 @@ unks_alphageno <- args[7] %>%
 
 ots28_missing_threshold <- as.numeric(args[8]) * 100 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain. Multiplied by 100 to get percentage
 gsi_missing_threshold <- as.numeric(args[9]) # If more than this much GSI data is missing, consider GSI data invalid
-PofZ_threshold <- as.numeric(args[10]) # If the maximum PofZ is less than this, consider the result ambiguous
+#PofZ_threshold <- as.numeric(args[10]) # If the maximum PofZ is less than this, consider the result ambiguous
 Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
 # Parse OTS28 info file ----------------
 
@@ -203,16 +203,10 @@ repunit_calls <- all_full_mix_results %>%
   mutate(
     fraction_missing = n_miss_loci / (n_miss_loci + n_non_miss_loci),
     final_call = case_when(
-      #(fraction_missing > gsi_missing_threshold) & (RoSA == "Late") ~ "Fall / Late Fall",
-      #(fraction_missing > gsi_missing_threshold) & (RoSA == "Early") ~ "Spring / Winter",
-      #fraction_missing > gsi_missing_threshold ~ "Missing Data",
-      #(Prob_repunit < PofZ_threshold) & (RoSA == "Early") ~ "Mixed Spring",
-      #(Prob_repunit < PofZ_threshold) & (RoSA == "Late") ~ "Mixed Fall / Late Fall",
-      #Prob_repunit < PofZ_threshold ~ "Mixed",
       fraction_missing > gsi_missing_threshold ~ NA_character_,
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "Spring",
       (RoSA == "Late") & (repunit == "spring") ~ "Fall",
-      (fraction_missing < gsi_missing_threshold) ~ repunit,
+      fraction_missing < gsi_missing_threshold ~ repunit,
       TRUE ~ "Assignment Error"
     )
   ) %>%
@@ -230,8 +224,8 @@ raw_repunit_probs <- all_full_mix_results %>%
   left_join(ots28_info, by = "indiv") %>%
   mutate(
     tributary = case_when(
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & (Prob_repunit >= PofZ_threshold) & ((n_miss_loci / (n_miss_loci + n_non_miss_loci)) < gsi_missing_threshold) ~ "Feather River Spring",
-      (RoSA == "Late") & (repunit == "spring") & (Prob_repunit > PofZ_threshold) ~ NA_character_,
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & ((n_miss_loci / (n_miss_loci + n_non_miss_loci)) < gsi_missing_threshold) ~ "Feather River Spring",
+      (RoSA == "Late") & (repunit == "spring") ~ NA_character_,
       repunit == "spring" ~ collection,
       TRUE ~ NA_character_
     ),

@@ -193,6 +193,14 @@ all_full_mix_results <- all_full_mix_est$indiv_posteriors %>%
 
 write_tsv(all_full_mix_est$indiv_posteriors, file = stringr::str_c(project_name, "_full_mix_posteriors.tsv"))
 
+all_full_mix_wide <- all_full_mix_est_indiv_posteriors %>%
+  select(indiv, collection, PofZ) %>%
+  pivot_wider(
+    names_from = collection,
+    values_from = PofZ
+  ) %>%
+  rename(SampleID = indiv) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 3)))
 
 ### export all the PofZ for each repunit
 
@@ -273,13 +281,15 @@ mix_results_wide <- all_full_mix_results %>%
     CV_Spring = spring,
     CV_Winter = winter
   ) %>%
-  left_join(raw_repunit_probs %>% select(SampleID = indiv, Tributary = tributary, trib_PofZ = PofZ), by = "SampleID") %>%
-  mutate(
-    trib_PofZ = if_else(!(final_call %in% c("Missing Data", "Fall / Late Fall", "Spring / Winter")), round(trib_PofZ, digits = 3), NA_real_),
-    final_call = str_to_title(final_call)
-  )
+  left_join(raw_repunit_probs %>% select(SampleID = indiv, Tributary = tributary), by = "SampleID") %>%
+  left_join(all_full_mix_wide, by = "SampleID") %>%
+  mutate(across(
+    .cols = ButteFall:SacWin,
+    .fns = ~ if_else(is.na(Pop_Structure_ID) | Pop_Structure_ID == "", NA_real_, .)
+  ))
 
 write_tsv(
   mix_results_wide,
-  file = stringr::str_c(project_name, "_summary.tsv")
+  file = stringr::str_c(project_name, "_summary.tsv"),
+  na = ""
 )

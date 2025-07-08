@@ -76,7 +76,7 @@ unks_alphageno <- args[7] %>%
 ots28_missing_threshold <- as.numeric(args[8]) * 100 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain. Multiplied by 100 to get percentage
 gsi_missing_threshold <- as.numeric(args[9]) # If more than this much GSI data is missing, consider GSI data invalid
 #PofZ_threshold <- as.numeric(args[10]) # If the maximum PofZ is less than this, consider the result ambiguous
-Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
+#Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
 # Parse OTS28 info file ----------------
 
 
@@ -96,7 +96,7 @@ ots28_info <- read_tsv(ots28_info_file) %>%
   mutate(
     indiv = clean_sample_name(indiv),
     RoSA = case_when(
-      ots28_missing >= ots28_missing_threshold ~ "Uncertain",
+      ots28_missing >= ots28_missing_threshold ~ NA_character_,
       RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold ~ "Intermediate",
       TRUE ~ RoSA
     )
@@ -256,21 +256,20 @@ mix_results_wide <- all_full_mix_results %>%
     ~ round(., digits = 2)
   )) %>% # Round to 2 decimal places
   mutate(
-    GSI_perc_missing = round(fraction_missing * 100, digits = 1),
-    ots28_missing = round(ots28_missing, digits = 1),
+    #GSI_perc_missing = round(fraction_missing * 100, digits = 1),
+    #ots28_missing = round(ots28_missing, digits = 1),
     probability = if_else((final_call != "Missing Data"), round(probability, digits = 3), NA_real_)
   ) %>%
   select(
     SampleID = indiv,
-    RoSA,
-    RoSA_perc_missing = ots28_missing,
-    GSI_perc_missing,
-    Fall = fall,
-    Late_fall = latefall,
-    Spring = spring,
-    Winter = winter,
-    final_call,
-    probability
+    Gtseq_Chr28_Geno = RoSA,
+    #RoSA_perc_missing = ots28_missing,
+    Pop_Structure_ID = final_call,
+    #GSI_perc_missing,
+    CV_Fall = fall,
+    CV_Late_fall = latefall,
+    CV_Spring = spring,
+    CV_Winter = winter
   ) %>%
   left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID") %>%
   mutate(

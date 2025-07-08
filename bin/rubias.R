@@ -242,7 +242,7 @@ mix_results_wide <- all_full_mix_results %>%
   spread(repunit, Prob_repunit) %>%
   group_by(indiv) %>%
   left_join(ots28_info, by = "indiv") %>% # add in the OTS28 info
-  mutate(RoSA = if_else((RoSA == "Intermediate", "Heterozygote", RoSA) %>% #convert "Intermediate" to "Heterozygote"
+  mutate(RoSA = if_else((RoSA == "Intermediate", "Heterozygote", RoSA)) %>% #convert "Intermediate" to "Heterozygote"
   left_join(repunit_calls %>% ungroup() %>% select(indiv, fraction_missing, final_call, probability = prob_repunit), by = "indiv") %>% # add in the final calls
   mutate(across(
     matches("spring|winter|fall|late"),
@@ -261,6 +261,7 @@ mix_results_wide <- all_full_mix_results %>%
     #ots28_missing = round(ots28_missing, digits = 1),
     probability = if_else((final_call != "Missing Data"), round(probability, digits = 3), NA_real_)
   ) %>%
+  mutate(across(c(RoSA, final_call), toupper)) %>%
   select(
     SampleID = indiv,
     Gtseq_Chr28_Geno = RoSA,
@@ -268,7 +269,7 @@ mix_results_wide <- all_full_mix_results %>%
     Pop_Structure_ID = final_call,
     #GSI_perc_missing,
     CV_Fall = fall,
-    CV_Late_fall = latefall,
+    CV_Late_Fall = latefall,
     CV_Spring = spring,
     CV_Winter = winter
   ) %>%

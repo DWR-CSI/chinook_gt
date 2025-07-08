@@ -11,7 +11,7 @@ clean_sample_name <- function(x) {
     str_remove("_S\\d+_?$") %>% # Remove _S123_ suffix
     str_remove("_R\\d+_?$") %>% # Remove _R123_ suffix
     str_remove("_L\\d+_?$") %>% # Remove _L123_ suffix
-    str_remove_all("-", "_") #replace dashes with underscores for JPE names
+    str_replace_all("-", "_") #replace dashes with underscores for JPE names
 }
 
 all_na_cols <- function(df) {

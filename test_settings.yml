@@ -18,7 +18,7 @@ n_loci: 204
 rubias_show_missing_data: "TRUE"
 panel: "full"
 concat_all_reads: false
-use_sequoia: TRUE
+use_sequoia: FALSE
 sequoia_mode: "par"
 sequoia_missing_threshold: 0.5
 parent_geno_input: "examples/PBT/FRH2024_reference_genotypes.txt"

@@ -181,7 +181,6 @@ workflow {
         baseline_file = "${projectDir}/data/baselines/full/SWFSC-chinook-reference-baseline-CV.csv"
         log.info "No baseline provided, using default: ${baseline_file}"
     }
-    baseline_ch = channel.fromPath(baseline_file, checkIfExists: true)
 
     def ots28_baseline_file
     if (params.containsKey('ots28_baseline')) {

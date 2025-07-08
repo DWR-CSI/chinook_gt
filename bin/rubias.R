@@ -242,6 +242,7 @@ mix_results_wide <- all_full_mix_results %>%
   spread(repunit, Prob_repunit) %>%
   group_by(indiv) %>%
   left_join(ots28_info, by = "indiv") %>% # add in the OTS28 info
+  mutate(RoSA = if_else((RoSA == "Intermediate", "Heterozygote", RoSA) %>% #convert "Intermediate" to "Heterozygote"
   left_join(repunit_calls %>% ungroup() %>% select(indiv, fraction_missing, final_call, probability = prob_repunit), by = "indiv") %>% # add in the final calls
   mutate(across(
     matches("spring|winter|fall|late"),
@@ -271,7 +272,7 @@ mix_results_wide <- all_full_mix_results %>%
     CV_Spring = spring,
     CV_Winter = winter
   ) %>%
-  left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID") %>%
+  left_join(raw_repunit_probs %>% select(SampleID = indiv, Tributary = tributary, trib_PofZ = PofZ), by = "SampleID") %>%
   mutate(
     trib_PofZ = if_else(!(final_call %in% c("Missing Data", "Fall / Late Fall", "Spring / Winter")), round(trib_PofZ, digits = 3), NA_real_),
     final_call = str_to_title(final_call)

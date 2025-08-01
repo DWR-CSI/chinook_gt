@@ -250,7 +250,7 @@ mix_results_wide <- all_full_mix_results %>%
   spread(repunit, Prob_repunit) %>%
   group_by(indiv) %>%
   left_join(ots28_info, by = "indiv") %>% # add in the OTS28 info
-  mutate(RoSA = if_else((RoSA == "Intermediate", "Heterozygote", RoSA)) %>% #convert "Intermediate" to "Heterozygote"
+  mutate(RoSA = if_else(RoSA == "Intermediate", "Heterozygote", RoSA)) %>% #convert "Intermediate" to "Heterozygote"
   left_join(repunit_calls %>% ungroup() %>% select(indiv, fraction_missing, final_call, probability = prob_repunit), by = "indiv") %>% # add in the final calls
   mutate(across(
     matches("spring|winter|fall|late"),

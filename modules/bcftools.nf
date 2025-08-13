@@ -23,6 +23,8 @@ process BCFTOOLS_MPILEUP {
             -o ${params.project}_${reference}.filtered.vcf
         """ :
         ""
+
+    """
     bcftools mpileup -a AD,DP,INFO/AD \
         -B -q 20 -Q 20 \
         -f ${ref} \

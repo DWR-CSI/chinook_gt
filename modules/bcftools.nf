@@ -19,7 +19,7 @@ process BCFTOOLS_MPILEUP {
         """
         bcftools view --exclude-types indels ${params.project}_${reference}.vcf \
         | bcftools +setGT - -- -t q -i 'DP<5 || QUAL<20' -n . \
-            -O v \\
+            -O v \
             -o ${params.project}_${reference}.filtered.vcf
         """ :
         ""

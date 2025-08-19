@@ -18,7 +18,7 @@ process BCFTOOLS_MPILEUP {
     def filter_cmd = (reference == "transition" || reference == "full") ?
         """
         bcftools view --exclude-types indels ${params.project}_${reference}.vcf \
-        | bcftools +setGT - -- -t q -i 'FMT/DP<5 || QUAL<20' -n . \
+        | bcftools +setGT - -- -t q -i 'FORMAT/DP<5 || QUAL<20' -n . \
         > ${params.project}_${reference}.filtered.vcf
         """ :
         ""

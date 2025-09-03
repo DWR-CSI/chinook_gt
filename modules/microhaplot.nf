@@ -46,18 +46,19 @@ process PREP_MHP_RDS {
 process GEN_HAPS {
     tag "Generate haplotypes: $reference"
     label 'process_small'
-    container 'docker.io/rocker/tidyverse:4.4.1'
+    container 'docker.io/rocker/bnguyen29/microhaplotopia:latest'
     publishDir "${params.outdir}/${params.project}/haplotypes", mode: 'copy'
 
     input:
     tuple val(reference), path(rds_files)
 
     output:
-    tuple val(reference), path("*_observed_unfiltered_haplotype.csv"), emit: haps
+    tuple val(reference), path("*_filtered_haplotypes.csv"), emit: haps
+    tuple val(reference), path("*_observed_unfiltered_haplotype.csv"), emit: unfiltered_haps
 
     script:
     """
-    gen_haps.R ${params.project}_${reference}
+    gen_haps.R ${params.project}_${reference} ${params.haplotype_depth} ${params.total_depth} ${params.allele_balance}
     """
 }
 

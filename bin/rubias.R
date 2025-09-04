@@ -45,24 +45,16 @@ fix_missing_loci <- function(mix_est) {
 
 # Get command-line arguments passed by Nextflow
 args <- commandArgs(trailingOnly = TRUE)
-unks_numgeno <- read_csv(args[1]) %>%
-  mutate_if(is.double, as.integer) %>%
-  mutate_if(is.logical, as.integer) %>%
-  rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%
-  rename_at(vars(ends_with(".2")), ~ str_replace(., "\\.2$", ".1")) %>%
-  mutate(sample_type = "mixture", repunit = NA) %>%
-  rename(collection = group, indiv = indiv.ID) %>%
-  rename_all(~ gsub("-", ".", .)) # dashes not accepted in column names
-ref_baseline <- read_csv(args[2]) %>%
+ref_baseline <- read_csv(args[1]) %>%
   mutate_if(is.double, as.integer) %>%
   rename_all(~ gsub("-", ".", .))
-project_name <- args[3]
+project_name <- args[2]
 
 
-show_missing_data <- as.logical(args[4])
-ots28_info_file <- args[5]
-panel_type <- as.character(args[6])
-unks_alphageno <- args[7] %>%
+show_missing_data <- as.logical(args[3])
+ots28_info_file <- args[4]
+panel_type <- as.character(args[5])
+unks_alphageno <- args[6] %>%
   read_tsv() %>%
   mutate_if(is.factor, as.character) %>%
   mutate_if(is.logical, as.character) %>%
@@ -72,9 +64,9 @@ unks_alphageno <- args[7] %>%
   rename(collection = group, indiv = indiv.ID) %>%
   rename_all(~ gsub("-", ".", .))
 
-ots28_missing_threshold <- as.numeric(args[8]) * 100 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain. Multiplied by 100 to get percentage
-gsi_missing_threshold <- as.numeric(args[9]) # If more than this much GSI data is missing, consider GSI data invalid
-PofZ_threshold <- as.numeric(args[10]) # If the maximum PofZ is less than this, consider the result ambiguous
+ots28_missing_threshold <- as.numeric(args[7]) * 100 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain. Multiplied by 100 to get percentage
+gsi_missing_threshold <- as.numeric(args[8]) # If more than this much GSI data is missing, consider GSI data invalid
+PofZ_threshold <- as.numeric(args[9]) # If the maximum PofZ is less than this, consider the result ambiguous
 Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
 # Parse OTS28 info file ----------------
 

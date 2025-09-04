@@ -58,6 +58,7 @@ unks_alphageno <- args[6] %>%
   read_tsv() %>%
   mutate_if(is.factor, as.character) %>%
   mutate_if(is.logical, as.character) %>%
+  mutate(across(everything(), ~ if_else(. == "NA", "ND", .))) %>%
   rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%
   rename_at(vars(ends_with(".2")), ~ str_replace(., "\\.2$", ".1")) %>%
   mutate(sample_type = "mixture", repunit = NA) %>%

@@ -18,7 +18,7 @@ rds.file <- setdiff(rds.file, c(pos.rds.file, annotate.rds.file))
 input_file <- dirFiles[rds.file[1]]  # Select the first matching file
 
 # 2. Load and preprocess the data
-mhp_RDS_file <- readRDS(input_file) %>%
+mhp_RDS_file <- readRDS(input_file)
 hap <- mhp_RDS_file %>%
   rename(
     indiv.ID = id
@@ -30,13 +30,13 @@ hap <- mhp_RDS_file %>%
   )
 
 unfiltered_output_filename <- paste0(project_name, "_observed_unfiltered_haplotype.csv")
-write.csv(hap, unfiltered_output_filename) # Don't need to drop first column downstream if using this
+write_csv(hap, unfiltered_output_filename) # Don't need to drop first column downstream if using this
 
 hap_fil <- filter_raw_microhap_data( # Filter based on depth and allele balance
   hap,
-  haplotype_depth = hapDepth,
-  total_depth = totDepth, 
-  allele_balance = alleleBalance
+  haplotype_depth = min_hap_depth,
+  total_depth = min_depth, 
+  allele_balance = allele_balance_param
 )
 
 nxa <- find_NXAlleles(hap_fil) # Find and drop N/X alleles

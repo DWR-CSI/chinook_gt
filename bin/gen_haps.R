@@ -24,7 +24,13 @@ hap <- mhp_RDS_file %>%
     indiv.ID = id
     
   ) %>% 
-  dplyr::filter(haplo != "haplo")
+  dplyr::filter(haplo != "haplo") %>%
+  mutate(
+    indiv.ID = str_remove(indiv.ID,"_*$") # Remove any trailing underscores from individual IDs
+  )
+
+unfiltered_output_filename <- paste0(project_name, "_observed_unfiltered_haplotype.csv")
+write.csv(hap, unfiltered_output_filename) # Don't need to drop first column downstream if using this
 
 hap_fil <- filter_raw_microhap_data( # Filter based on depth and allele balance
   hap,
@@ -55,6 +61,9 @@ write_csv(indiv, file = paste0(project_name, "_xtralleles_individuals.csv"))
 locus <- xtralleles %>% group_by(locus) %>% summarise(count = n_distinct(indiv.ID)) %>% arrange(desc(count)) #modified from Anthony's code to count the number of individuals per locus that were impacted by extra alleles
 write_csv(locus, file = paste0(project_name, "_xtralleles_locus.csv"))
 
+hap_fil1 <- hap_fil_nxa %>% 
+  anti_join(xtralleles)
+
 loc_depth <- summarize_data(
   datafile = hap_fil1,
   group_var = "locus") %>% 
@@ -67,8 +76,36 @@ ind_depth <- summarize_data(
   arrange(., mean_depth)
 write_csv(ind_depth, file = paste0(project_name, "_individual_depth.csv"))
 
-haplo.all <- haplo.all %>% rename("indiv.ID" = id)
-output_filename <- paste0(project_name, "_observed_unfiltered_haplotype.csv")
-write.csv(haplo.all, output_filename) # Don't need to drop first column downstream if using this
+# Drop duplicated samples
+duplicate_samples <- find_duplicates(hap_fil1)
+if (!is.null(duplicate_samples)){
+  hap_fil1 <- resolve_duplicate_samples(hap_fil1, resolve = "drop")
+}
 
-# 5. Filtered haplotype production
+# Add second allele for homozygous haplotypes when missing
+hap_final <- add_hom_second_allele(hap_fil1)
+
+# Format for RUBIAS/CKMR
+haps_2col <- mhap_transform(
+  long_genos = hap_final,
+  program = "rubias"
+)
+
+# append "_1" and "_2" to the locus names
+suffs <- c(1,2)
+locs <- colnames(haps_2col)[-1]
+addnums <- as_tibble(cbind(locname = locs, suffix = suffs)) %>% 
+  mutate(twocol = paste(locs, suffs, sep = ".")) %>% 
+  pull(twocol)
+
+haps_2col_final <- haps_2col
+names(haps_2col_final) <- c("indiv.ID", addnums)
+
+# add back in missing individuals
+missing_samples <- find_missing_samples(hap, hap_fil1)
+haps_2col_final <- haps_2col_final %>% add_row(indiv.ID=missing_samples$indiv.ID) %>%
+  mutate(group = "ND") %>%
+  relocate(group)
+
+# write final genotype file
+write_csv(haps_2col_final, file=paste0(project_name, "_filtered_haplotype.csv"))

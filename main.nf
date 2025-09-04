@@ -373,21 +373,14 @@ workflow {
     // Run the microhaplotype analysis
     PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet)
     GEN_HAPS(PREP_MHP_RDS.out.rds)
-    panel_branched_haps = GEN_HAPS.out.haps
-        .branch { 
-            main: it[0] =~ /transition|full/
-            other: true
-            }
-    HAP2GENO(panel_branched_haps.main, locus_index_ch)
-    //CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
 
     // Run Rubias analyses
-    RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, HAP2GENO.out.numgeno, baseline_ch, params.panel.toLowerCase(), HAP2GENO.out.geno)
+    RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), HAP2GENO.out.geno)
 
     // Run PBT analysis
     if (params.use_sequoia) {
         par_geno_file = Channel.fromPath(params.parent_geno_input, checkIfExists: true)
         par_lh_file = Channel.fromPath(params.parent_lifehistory, checkIfExists: true)
-        RUN_SEQUOIA(par_geno_file, par_lh_file, HAP2GENO.out.geno, params.offspring_birthyear, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
+        RUN_SEQUOIA(par_geno_file, par_lh_file, GEN_HAPS.out.haps, params.offspring_birthyear, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
     }
 }

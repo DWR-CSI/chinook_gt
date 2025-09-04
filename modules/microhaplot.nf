@@ -61,7 +61,7 @@ process GEN_HAPS {
     tuple val(reference), path("*xtraalleles_individuals.csv"), emit: xtra_alleles_individuals_csv
     tuple val(reference), path("*xtraalleles_locus.csv"), emit: xtra_alleles_locus_csv
     tuple val(reference), path("*_locus_depth.csv"), emit: locus_depth_csv
-    tuple val(reference), path("*_individualdepth.csv"), emit: individual_depth_csv
+    tuple val(reference), path("*_individual_depth.csv"), emit: individual_depth_csv
 
     script:
     """

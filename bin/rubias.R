@@ -72,12 +72,10 @@ Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used 
 
 
 
-if (panel_type == "transition") {
-  unks <- unks_numgeno
-} else if (panel_type == "full") {
+if (panel_type == "full") {
   unks <- unks_alphageno
 } else {
-  stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'transition' or 'full'."))
+  stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'full'."))
 }
 
 unks <- unks %>%

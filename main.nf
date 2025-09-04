@@ -35,7 +35,7 @@ include { SAMTOOLS } from './modules/samtools'
 include { MULTIQC } from './modules/multiqc'
 include { INDEX_REFERENCE } from './modules/index_reference'
 include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
-include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
+include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
 include { RUN_RUBIAS } from './modules/rubias.nf'
 include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
 include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
@@ -375,7 +375,7 @@ workflow {
     GEN_HAPS(PREP_MHP_RDS.out.rds)
 
     // Run Rubias analyses
-    RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), HAP2GENO.out.geno)
+    RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps)
 
     // Run PBT analysis
     if (params.use_sequoia) {

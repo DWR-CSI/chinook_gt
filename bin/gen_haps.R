@@ -108,4 +108,4 @@ haps_2col_final <- haps_2col_final %>% add_row(indiv.ID=missing_samples$indiv.ID
   relocate(group)
 
 # write final genotype file
-write_csv(haps_2col_final, file=paste0(project_name, "_filtered_haplotype.csv"))
+write_csv(haps_2col_final, file=paste0(project_name, "_filtered_haplotypes.csv"))

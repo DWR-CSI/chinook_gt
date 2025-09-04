@@ -9,6 +9,14 @@ min_hap_depth <- as.numeric(args[2])
 min_depth <- as.numeric(args[3])
 allele_balance_param <- as.numeric(args[4])
 
+# Custom functions
+find_missing_samples2 <- function (raw_data, filtered_data) 
+{
+  missing_samples <- raw_data %>% filter(!indiv.ID %in% filtered_data$indiv.ID) %>% 
+    distinct(indiv.ID, .keep_all = TRUE) %>% dplyr::select(indiv.ID, group)
+  missing_samples
+}
+
 # 1. Find the correct .rds file
 dirFiles <- list.files()
 rds.file <- grep(".rds", dirFiles)
@@ -102,7 +110,7 @@ haps_2col_final <- haps_2col
 names(haps_2col_final) <- c("indiv.ID", addnums)
 
 # add back in missing individuals
-missing_samples <- find_missing_samples(hap, hap_fil1)
+missing_samples <- find_missing_samples2(hap, hap_fil1)
 haps_2col_final <- haps_2col_final %>% add_row(indiv.ID=missing_samples$indiv.ID) %>%
   mutate(group = "ND") %>%
   relocate(group)

@@ -46,7 +46,7 @@ process PREP_MHP_RDS {
 process GEN_HAPS {
     tag "Generate haplotypes: $reference"
     label 'process_small'
-    container 'docker.io/rocker/bnguyen29/microhaplotopia:latest'
+    container 'docker.io/bnguyen29/microhaplotopia:latest'
     publishDir "${params.outdir}/${params.project}/haplotypes", mode: 'copy'
 
     input:

@@ -55,7 +55,7 @@ show_missing_data <- as.logical(args[3])
 ots28_info_file <- args[4]
 panel_type <- as.character(args[5])
 unks_alphageno <- args[6] %>%
-  read_tsv() %>%
+  read_csv() %>%
   mutate_if(is.factor, as.character) %>%
   mutate_if(is.logical, as.character) %>%
   mutate(across(everything(), ~ if_else(. == "NA", "ND", .))) %>%

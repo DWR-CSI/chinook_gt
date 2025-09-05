@@ -53,7 +53,7 @@ process GEN_HAPS {
     tuple val(reference), path(rds_files)
 
     output:
-    tuple val(reference), path("*_filtered_haplotypes.csv"), emit: haps
+    path("*_filtered_haplotypes.csv"), emit: haps
     tuple val(reference), path("*_observed_unfiltered_haplotype.csv"), emit: unfiltered_haps
     tuple val(reference), path("*_nxa.csv"), emit: nxa_csv
     tuple val(reference), path("*_nxa_count.csv"), emit: nxa_count_csv

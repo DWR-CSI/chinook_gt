@@ -88,64 +88,49 @@ chinook_species_checker <- function(data, diagnostic_locus = "OkiOts_120255.113"
     select(SampleID = indiv, Species)
 }
 
-# Heterozygosity calculation function
-# Calculates genome-wide heterozygosity across all genetic loci for each individual
-# Heterozygosity is the proportion of loci where an individual has two different alleles
-#
-# Parameters:
-#   data: Data frame containing genetic data with paired allele columns
-#   gen_start_col: Column number where genetic loci start (default = 5, based on RUBIAS format)
-#
-# Data structure assumptions:
-#   - Genetic loci are stored as paired columns (allele1, allele2) starting at gen_start_col
-#   - Every 2 columns represent one locus (column i and i+1)
-#   - Missing data is coded as "ND" or NA
-#   - Sample metadata (indiv, collection, etc.) occupy columns 1 through gen_start_col-1
-#
-# Returns:
-#   Data frame with columns:
-#     - indiv.ID: Individual identifier
-#     - heterozygosity: Proportion of valid loci that are heterozygous (0-1)
-#     - heterozygous_loci: Count of heterozygous loci
-#     - valid_loci: Count of loci with complete genotype data (both alleles present)
-#     - total_loci: Total number of loci examined
-#
-# Quality control:
-#   - Only loci with both alleles present (not "ND" or NA) are included in calculations
-#   - If an individual has no valid loci, heterozygosity is set to NA
-#   - Loci are considered heterozygous only when alleles are different AND both are present
 calculate_heterozygosity <- function(data, gen_start_col = 5) {
-  # Get genetic loci columns (starting from gen_start_col, every 2 columns is a locus)
-  genetic_cols <- seq(gen_start_col, ncol(data), 2)
-  
-  data %>%
-    rowwise() %>%
+  # Calculate heterozygosity for each individual
+  het_data <- data %>%
+    select(indiv, everything()) %>%
     mutate(
-      total_loci = length(genetic_cols),
-      heterozygous_loci = sum(sapply(genetic_cols, function(i) {
-        if (i + 1 <= ncol(data)) {
-          allele1 <- .data[[names(data)[i]]]
-          allele2 <- .data[[names(data)[i + 1]]]
-          # Count as heterozygous if both alleles are present and different
-          if (!is.na(allele1) && !is.na(allele2) && allele1 != "ND" && allele2 != "ND") {
-            return(allele1 != allele2)
+      heterozygosity = map_dbl(1:n(), function(row_idx) {
+        # Get genetic data for this individual starting from gen_start_col
+        genetic_data <- as.character(unlist(.[row_idx, gen_start_col:ncol(.)]))
+        
+        # Group into pairs (every 2 columns is a locus)
+        n_loci <- length(genetic_data) %/% 2
+        valid_loci <- 0
+        het_loci <- 0
+        
+        for (locus in 1:n_loci) {
+          allele1_idx <- (locus - 1) * 2 + 1
+          allele2_idx <- (locus - 1) * 2 + 2
+          
+          if (allele1_idx <= length(genetic_data) && allele2_idx <= length(genetic_data)) {
+            allele1 <- genetic_data[allele1_idx]
+            allele2 <- genetic_data[allele2_idx]
+            
+            # Check if both alleles are present (not NA or ND)
+            if (!is.na(allele1) && !is.na(allele2) && allele1 != "ND" && allele2 != "ND") {
+              valid_loci <- valid_loci + 1
+              if (allele1 != allele2) {
+                het_loci <- het_loci + 1
+              }
+            }
           }
         }
-        return(FALSE)
-      })),
-      valid_loci = sum(sapply(genetic_cols, function(i) {
-        if (i + 1 <= ncol(data)) {
-          allele1 <- .data[[names(data)[i]]]
-          allele2 <- .data[[names(data)[i + 1]]]
-          # Count as valid if both alleles are present
-          return(!is.na(allele1) && !is.na(allele2) && allele1 != "ND" && allele2 != "ND")
+        
+        # Return proportion of heterozygous loci
+        if (valid_loci > 0) {
+          return(het_loci / valid_loci)
+        } else {
+          return(NA_real_)
         }
-        return(FALSE)
-      })),
-      heterozygosity = if_else(valid_loci > 0, heterozygous_loci / valid_loci, NA_real_)
+      })
     ) %>%
-    ungroup() %>%
     select(SampleID = indiv, heterozygosity)
+  
+  return(het_data)
 }
 
 

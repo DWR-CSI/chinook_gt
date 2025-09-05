@@ -265,7 +265,7 @@ reference_parental_lifehistory <- ref_lifehistory_path %>%
     ))
 
 offspring_genotypes <- offspring_genotypes_path %>%
-    read_tsv(col_types = cols(
+    read_csv(col_types = cols(
         .default = col_character(),
         indiv.ID = col_character()
     )) %>%

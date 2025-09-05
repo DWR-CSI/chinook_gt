@@ -43,6 +43,94 @@ fix_missing_loci <- function(mix_est) {
   return(mix_est)
 }
 
+# Chinook species checker function
+# Determines species classification based on OkiOts_120255-113 locus genotype
+# This locus is diagnostic for Chinook salmon species identification
+# 
+# Parameters:
+#   data: Data frame containing genetic data with OkiOts_120255.113 and OkiOts_120255.113.1 columns
+#
+# Returns:
+#   Data frame with indiv.ID and Species columns
+#   Species classifications:
+#     - "Chinook": Both alleles are "GA" (homozygous for Chinook-specific allele)
+#     - "Unconfirmed": Either allele is missing data ("ND")  
+#     - "non-Chinook": Both alleles are present but at least one is not "GA"
+#     - "Error": Catch-all for unexpected cases
+chinook_species_checker <- function(data) {
+  data %>%
+    mutate(
+      Species = case_when(
+        OkiOts_120255.113 == "GA" & OkiOts_120255.113.1 == "GA" ~ "Chinook",
+        OkiOts_120255.113 == "ND" | OkiOts_120255.113.1 == "ND" ~ "Unconfirmed",
+        OkiOts_120255.113 != "GA" & OkiOts_120255.113.1 != "GA" ~ "non-Chinook",
+        TRUE ~ "Error"
+      )
+    ) %>%
+    select(SampleID = indiv, Species)
+}
+
+# Heterozygosity calculation function
+# Calculates genome-wide heterozygosity across all genetic loci for each individual
+# Heterozygosity is the proportion of loci where an individual has two different alleles
+#
+# Parameters:
+#   data: Data frame containing genetic data with paired allele columns
+#   gen_start_col: Column number where genetic loci start (default = 5, based on RUBIAS format)
+#
+# Data structure assumptions:
+#   - Genetic loci are stored as paired columns (allele1, allele2) starting at gen_start_col
+#   - Every 2 columns represent one locus (column i and i+1)
+#   - Missing data is coded as "ND" or NA
+#   - Sample metadata (indiv, collection, etc.) occupy columns 1 through gen_start_col-1
+#
+# Returns:
+#   Data frame with columns:
+#     - indiv.ID: Individual identifier
+#     - heterozygosity: Proportion of valid loci that are heterozygous (0-1)
+#     - heterozygous_loci: Count of heterozygous loci
+#     - valid_loci: Count of loci with complete genotype data (both alleles present)
+#     - total_loci: Total number of loci examined
+#
+# Quality control:
+#   - Only loci with both alleles present (not "ND" or NA) are included in calculations
+#   - If an individual has no valid loci, heterozygosity is set to NA
+#   - Loci are considered heterozygous only when alleles are different AND both are present
+calculate_heterozygosity <- function(data, gen_start_col = 5) {
+  # Get genetic loci columns (starting from gen_start_col, every 2 columns is a locus)
+  genetic_cols <- seq(gen_start_col, ncol(data), 2)
+  
+  data %>%
+    rowwise() %>%
+    mutate(
+      total_loci = length(genetic_cols),
+      heterozygous_loci = sum(sapply(genetic_cols, function(i) {
+        if (i + 1 <= ncol(data)) {
+          allele1 <- .data[[names(data)[i]]]
+          allele2 <- .data[[names(data)[i + 1]]]
+          # Count as heterozygous if both alleles are present and different
+          if (!is.na(allele1) && !is.na(allele2) && allele1 != "ND" && allele2 != "ND") {
+            return(allele1 != allele2)
+          }
+        }
+        return(FALSE)
+      })),
+      valid_loci = sum(sapply(genetic_cols, function(i) {
+        if (i + 1 <= ncol(data)) {
+          allele1 <- .data[[names(data)[i]]]
+          allele2 <- .data[[names(data)[i + 1]]]
+          # Count as valid if both alleles are present
+          return(!is.na(allele1) && !is.na(allele2) && allele1 != "ND" && allele2 != "ND")
+        }
+        return(FALSE)
+      })),
+      heterozygosity = if_else(valid_loci > 0, heterozygous_loci / valid_loci, NA_real_)
+    ) %>%
+    ungroup() %>%
+    select(SampleID = indiv, heterozygosity)
+}
+
+
 # Get command-line arguments passed by Nextflow
 args <- commandArgs(trailingOnly = TRUE)
 ref_baseline <- read_csv(args[1]) %>%
@@ -81,6 +169,16 @@ if (panel_type == "full") {
 
 unks <- unks %>%
   mutate(indiv = clean_sample_name(indiv))
+
+
+# Species identification and genetic quality assessment ----------------
+# Run species checker on unknown samples after sample name cleanup
+# This identifies potential non-Chinook samples based on diagnostic locus OkiOts_120255-113
+species_results <- chinook_species_checker(unks)
+
+# Calculate genome-wide heterozygosity for all unknown samples
+# This provides a measure of genetic diversity and can help identify potential issues including non-Chinook samples
+heterozygosity_results <- calculate_heterozygosity(unks)
 
 ots28_info <- read_tsv(ots28_info_file) %>%
   mutate(
@@ -273,7 +371,10 @@ mix_results_wide <- all_full_mix_results %>%
     final_call = str_to_title(final_call)
   )
 
+mix_results_wide_w_species_heterozygosity <- mix_results_wide %>%
+  left_join(species_results, by = "SampleID") %>%
+  left_join(heterozygosity_results, by = "SampleID")
 write_tsv(
-  mix_results_wide,
+  mix_results_wide_w_species_heterozygosity,
   file = stringr::str_c(project_name, "_summary.tsv")
 )

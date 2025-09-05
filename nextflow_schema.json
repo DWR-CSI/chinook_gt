@@ -115,7 +115,7 @@
                     "type": "number",
                     "description": "Minimum allele balance required for the genotype to be retained.",
                     "help": "Ratio of the number of reads for a given microhaplotype divided by the number of reads of the most common microhaplotype for that individual at that locus. For example, if you have a heterozygote with 60 reads for the haplotype AA and 100 reads for the haplotype TC, the allele balance for the haplotype AA for that individual at that locus is 0.6 and is 1.0 for TC.",
-                    "default": 0.3,
+                    "default": 0.35,
                     "minimum": 0,
                     "maximum": 1
                 }

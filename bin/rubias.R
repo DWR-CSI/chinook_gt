@@ -128,7 +128,8 @@ calculate_heterozygosity <- function(data, gen_start_col = 5) {
         }
       })
     ) %>%
-    select(SampleID = indiv, heterozygosity)
+    select(SampleID = indiv, heterozygosity) %>%
+    mutate(heterozygosity = round(heterozygosity, digits = 3))
   
   return(het_data)
 }

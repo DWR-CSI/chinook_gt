@@ -60,14 +60,14 @@ hap_fil_nxa <- nxa %>%
 
 # Find and drop extra aleles
 xtralleles <- find_contaminated_samples(hap_fil_nxa)
-write_csv(xtralleles, file = paste0(project_name, "_xtralleles.csv"))
+write_csv(xtralleles, file = paste0(project_name, "_xtraalleles.csv"))
 
 # Extra diagnostic files
 indiv <- xtralleles %>% group_by(indiv.ID) %>% summarise(count = n_distinct(locus)) #modified from Anthony's code to count the number of loci impacted by extra alleles per individual
-write_csv(indiv, file = paste0(project_name, "_xtralleles_individuals.csv"))
+write_csv(indiv, file = paste0(project_name, "_xtraalleles_individuals.csv"))
 
 locus <- xtralleles %>% group_by(locus) %>% summarise(count = n_distinct(indiv.ID)) %>% arrange(desc(count)) #modified from Anthony's code to count the number of individuals per locus that were impacted by extra alleles
-write_csv(locus, file = paste0(project_name, "_xtralleles_locus.csv"))
+write_csv(locus, file = paste0(project_name, "_xtraalleles_locus.csv"))
 
 hap_fil1 <- hap_fil_nxa %>% 
   anti_join(xtralleles)

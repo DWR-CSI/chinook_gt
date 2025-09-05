@@ -25,6 +25,9 @@ params.sequoia_mode = params.sequoia_mode ?: 'par'
 params.sequoia_missing_threshold = params.sequoia_missing_threshold ?: 0.5
 params.species_max_repro_age = params.species_max_repro_age ?: 8
 params.species_min_repro_age = params.species_min_repro_age ?: 1
+params.haplotype_depth = params.haplotype_depth ?: 4
+params.total_depth = params.total_depth ?: 8
+params.allele_balance = params.allele_balance ?: 0.35
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -35,7 +38,7 @@ include { SAMTOOLS } from './modules/samtools'
 include { MULTIQC } from './modules/multiqc'
 include { INDEX_REFERENCE } from './modules/index_reference'
 include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
-include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS; HAP2GENO; CHECK_FILE_UPDATE } from './modules/microhaplot.nf'
+include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS} from './modules/microhaplot.nf'
 include { RUN_RUBIAS } from './modules/rubias.nf'
 include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
 include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
@@ -109,16 +112,23 @@ workflow {
     Panel Type : ${params.panel ?: 'Not specified'}
     References : ${params.reference ? 'User specified' : 'Auto-selected'}
     
+    Microhaplotopia filtering parameters:
+    Haplotype Depth Filter  : ${params.haplotype_depth}
+    Haplotype Total Depth   : ${params.total_depth}
+    Allele Balance Filter   : ${params.allele_balance}
     Rubias parameters:
     OTS28 Missing Threshold : ${params.ots28_missing_threshold}
     GSI Missing Threshold   : ${params.gsi_missing_threshold}
     PofZ Threshold          : ${params.pofz_threshold}
+    Other parameters:
     Concatenate All Reads   : ${params.concat_all_reads}
+    Sequoia Parameters:
     Use Sequoia             : ${params.use_sequoia}
     Sequoia Mode            : ${params.sequoia_mode}
     Sequoia Missing Threshold: ${params.sequoia_missing_threshold}
     Species Max Repro Age   : ${params.species_max_repro_age}
     Species Min Repro Age   : ${params.species_min_repro_age}
+
     ==============================================
     """
     // Resolve and validate references
@@ -373,21 +383,14 @@ workflow {
     // Run the microhaplotype analysis
     PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet)
     GEN_HAPS(PREP_MHP_RDS.out.rds)
-    panel_branched_haps = GEN_HAPS.out.haps
-        .branch { 
-            main: it[0] =~ /transition|full/
-            other: true
-            }
-    HAP2GENO(panel_branched_haps.main, locus_index_ch)
-    //CHECK_FILE_UPDATE(HAP2GENO.out.new_index, locus_index_ch) | view
 
     // Run Rubias analyses
-    RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, HAP2GENO.out.numgeno, baseline_ch, params.panel.toLowerCase(), HAP2GENO.out.geno)
+    RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps)
 
     // Run PBT analysis
     if (params.use_sequoia) {
         par_geno_file = Channel.fromPath(params.parent_geno_input, checkIfExists: true)
         par_lh_file = Channel.fromPath(params.parent_lifehistory, checkIfExists: true)
-        RUN_SEQUOIA(par_geno_file, par_lh_file, HAP2GENO.out.geno, params.offspring_birthyear, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
+        RUN_SEQUOIA(par_geno_file, par_lh_file, GEN_HAPS.out.haps, params.offspring_birthyear, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
     }
 }

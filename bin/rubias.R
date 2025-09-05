@@ -44,26 +44,44 @@ fix_missing_loci <- function(mix_est) {
 }
 
 # Chinook species checker function
-# Determines species classification based on OkiOts_120255-113 locus genotype
+# Determines species classification based on diagnostic locus genotype
 # This locus is diagnostic for Chinook salmon species identification
 # 
 # Parameters:
-#   data: Data frame containing genetic data with OkiOts_120255.113 and OkiOts_120255.113.1 columns
+#   data: Data frame containing genetic data with diagnostic locus columns
+#   diagnostic_locus: Base name of the diagnostic locus (default: "OkiOts_120255.113")
 #
 # Returns:
-#   Data frame with indiv.ID and Species columns
+#   Data frame with SampleID and Species columns
 #   Species classifications:
 #     - "Chinook": Both alleles are "GA" (homozygous for Chinook-specific allele)
 #     - "Unconfirmed": Either allele is missing data ("ND")  
 #     - "non-Chinook": Both alleles are present but at least one is not "GA"
 #     - "Error": Catch-all for unexpected cases
-chinook_species_checker <- function(data) {
+chinook_species_checker <- function(data, diagnostic_locus = "OkiOts_120255.113", suffix = ".1") {
+  # Check if required columns exist
+  allele1_col <- diagnostic_locus
+  allele2_col <- paste0(diagnostic_locus, suffix)
+  
+  if (!all(c(allele1_col, allele2_col) %in% names(data))) {
+    warning(paste("Species diagnostic columns", allele1_col, "and/or", allele2_col, "not found. Returning all samples as 'Unconfirmed'"))
+    return(data %>% 
+           select(SampleID = indiv) %>%
+           mutate(Species = "Unconfirmed"))
+  }
+  
+  # Check if indiv column exists
+  if (!"indiv" %in% names(data)) {
+    stop("Column 'indiv' not found in data")
+  }
+  
   data %>%
     mutate(
       Species = case_when(
-        OkiOts_120255.113 == "GA" & OkiOts_120255.113.1 == "GA" ~ "Chinook",
-        OkiOts_120255.113 == "ND" | OkiOts_120255.113.1 == "ND" ~ "Unconfirmed",
-        OkiOts_120255.113 != "GA" & OkiOts_120255.113.1 != "GA" ~ "non-Chinook",
+        .data[[allele1_col]] == "GA" & .data[[allele2_col]] == "GA" ~ "Chinook",
+        .data[[allele1_col]] == "ND" | .data[[allele2_col]] == "ND" ~ "Unconfirmed",
+        is.na(.data[[allele1_col]]) | is.na(.data[[allele2_col]]) ~ "Unconfirmed",
+        .data[[allele1_col]] != "GA" | .data[[allele2_col]] != "GA" ~ "non-Chinook",
         TRUE ~ "Error"
       )
     ) %>%

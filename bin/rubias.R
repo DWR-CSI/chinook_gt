@@ -88,7 +88,7 @@ chinook_species_checker <- function(data, diagnostic_locus = "OkiOts_120255.113"
     select(SampleID = indiv, Species)
 }
 
-LFAR_checker <- function(data, diagnostic_loci = c("NC_037130.1:864908-865208", "NC_037130.1:1062935-1063235"), suffix = ".1") {
+LFAR_checker <- function(data, diagnostic_loci = c("NC_037130.1:864908.865208", "NC_037130.1:1062935.1063235"), suffix = ".1") {
   allele1_cols <- diagnostic_loci
   allele2_cols <- paste0(diagnostic_loci, suffix)
   all_cols <- c(allele1_cols, allele2_cols)
@@ -101,7 +101,7 @@ LFAR_checker <- function(data, diagnostic_loci = c("NC_037130.1:864908-865208", 
   
   data %>%
     mutate(
-      LFAR_status = if_else(
+      LFAR_markers_present = if_else(
         rowSums(!is.na(across(all_of(all_cols))) & across(all_of(all_cols)) != "ND") > 0,
         TRUE, FALSE
       )
@@ -205,7 +205,7 @@ species_results <- chinook_species_checker(unks)
 # This provides a measure of genetic diversity and can help identify potential issues including non-Chinook samples
 heterozygosity_results <- calculate_heterozygosity(unks)
 
-LFAR_results <- LFAR_checker(unks) 
+LFAR_results <- LFAR_checker(unks)
 
 ots28_info <- read_tsv(ots28_info_file) %>%
   mutate(

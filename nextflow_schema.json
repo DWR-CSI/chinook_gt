@@ -12,7 +12,7 @@
             "properties": {
                 "project": {
                     "type": "string",
-                    "description": "Give a name to this project or run. No spaces or special characters.",
+                    "description": "Give a name to this project or run. No spaces or special characters. This is also used as the output subdirectory name in the results folder.",
                     "default": "YourProject1",
                     "pattern": "^[A-Za-z0-9_-]+$"
                 },

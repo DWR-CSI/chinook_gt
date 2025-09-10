@@ -398,11 +398,18 @@ mix_results_wide <- all_full_mix_results %>%
     final_call = str_to_title(final_call)
   )
 
-mix_results_wide_w_species_heterozygosity <- mix_results_wide %>%
+mix_results_wide_w_extras <- mix_results_wide %>%
   left_join(species_results, by = "SampleID") %>%
   left_join(heterozygosity_results, by = "SampleID") %>%
-  left_join(LFAR_results, by = "SampleID")
+  left_join(LFAR_results, by = "SampleID") %>%
+  mutate(
+    final_call = case_when(
+      Species == "non-Chinook" ~ "non-Chinook",
+      (LFAR_markers_present == FALSE) & (final_call %in% c("Fall", "Latefall")) ~ "Fall / Late Fall", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
+      TRUE ~ final_call
+    )
+  )
 write_tsv(
-  mix_results_wide_w_species_heterozygosity,
+  mix_results_wide_w_extras,
   file = stringr::str_c(project_name, "_summary.tsv")
 )

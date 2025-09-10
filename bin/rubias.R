@@ -88,6 +88,27 @@ chinook_species_checker <- function(data, diagnostic_locus = "OkiOts_120255.113"
     select(SampleID = indiv, Species)
 }
 
+LFAR_checker <- function(data, diagnostic_loci = c("NC_037130.1:864908.865208", "NC_037130.1:1062935.1063235"), suffix = ".1") {
+  allele1_cols <- diagnostic_loci
+  allele2_cols <- paste0(diagnostic_loci, suffix)
+  all_cols <- c(allele1_cols, allele2_cols)
+  
+  # Ensure all columns exist
+  missing_cols <- setdiff(all_cols, names(data))
+  if (length(missing_cols) > 0) {
+    stop("Missing LFAR check columns: ", paste(missing_cols, collapse = ", "))
+  }
+  
+  data %>%
+    mutate(
+      LFAR_markers_present = if_else(
+        rowSums(!is.na(across(all_of(all_cols))) & across(all_of(all_cols)) != "ND") > 0,
+        TRUE, FALSE
+      )
+    ) %>%
+    select(SampleID = indiv, LFAR_markers_present)
+}
+
 calculate_heterozygosity <- function(data, gen_start_col = 5) {
   # Calculate heterozygosity for each individual
   het_data <- data %>%
@@ -183,6 +204,8 @@ species_results <- chinook_species_checker(unks)
 # Calculate genome-wide heterozygosity for all unknown samples
 # This provides a measure of genetic diversity and can help identify potential issues including non-Chinook samples
 heterozygosity_results <- calculate_heterozygosity(unks)
+
+LFAR_results <- LFAR_checker(unks)
 
 ots28_info <- read_tsv(ots28_info_file) %>%
   mutate(
@@ -375,10 +398,18 @@ mix_results_wide <- all_full_mix_results %>%
     final_call = str_to_title(final_call)
   )
 
-mix_results_wide_w_species_heterozygosity <- mix_results_wide %>%
+mix_results_wide_w_extras <- mix_results_wide %>%
   left_join(species_results, by = "SampleID") %>%
-  left_join(heterozygosity_results, by = "SampleID")
+  left_join(heterozygosity_results, by = "SampleID") %>%
+  left_join(LFAR_results, by = "SampleID") %>%
+  mutate(
+    final_call = case_when(
+      Species == "non-Chinook" ~ "non-Chinook",
+      (LFAR_markers_present == FALSE) & (final_call %in% c("Fall", "Latefall")) ~ "Fall / Late Fall", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
+      TRUE ~ final_call
+    )
+  )
 write_tsv(
-  mix_results_wide_w_species_heterozygosity,
+  mix_results_wide_w_extras,
   file = stringr::str_c(project_name, "_summary.tsv")
 )

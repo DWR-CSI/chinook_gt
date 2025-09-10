@@ -129,7 +129,7 @@
                 "use_sequoia": {
                     "type": "boolean",
                     "description": "Enable Sequoia for PBT analysis. If false, the pipeline will not run Sequoia.",
-                    "default": true
+                    "default": false
                 },
                 "sequoia_mode": {
                     "type": "string",

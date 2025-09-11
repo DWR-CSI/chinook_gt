@@ -34,7 +34,7 @@ process ANALYZE_IDXSTATS {
     # Function to process a single idxstats file
     process_idxstats <- function(file, n_loci) {
       df <- read.table(file, nrows = n_loci, stringsAsFactors = FALSE)
-      ind <- str_remove(basename(file), "_((full|transition)_)?idxstats\\.txt")
+      ind <- str_remove(basename(file), "_((full|transition)_)?idxstats\\\.txt")
       df\$ind <- ind
       return(df)
     }

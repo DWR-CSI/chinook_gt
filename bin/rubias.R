@@ -44,53 +44,171 @@ fix_missing_loci <- function(mix_est) {
   return(mix_est)
 }
 
+# Chinook species checker function
+# Determines species classification based on diagnostic locus genotype
+# This locus is diagnostic for Chinook salmon species identification
+# 
+# Parameters:
+#   data: Data frame containing genetic data with diagnostic locus columns
+#   diagnostic_locus: Base name of the diagnostic locus (default: "OkiOts_120255.113")
+#
+# Returns:
+#   Data frame with SampleID and Species columns
+#   Species classifications:
+#     - "Chinook": Both alleles are "GA" (homozygous for Chinook-specific allele)
+#     - "Unconfirmed": Either allele is missing data ("ND")  
+#     - "non-Chinook": Both alleles are present but at least one is not "GA"
+#     - "Error": Catch-all for unexpected cases
+chinook_species_checker <- function(data, diagnostic_locus = "OkiOts_120255.113", suffix = ".1") {
+  # Check if required columns exist
+  allele1_col <- diagnostic_locus
+  allele2_col <- paste0(diagnostic_locus, suffix)
+  
+  if (!all(c(allele1_col, allele2_col) %in% names(data))) {
+    warning(paste("Species diagnostic columns", allele1_col, "and/or", allele2_col, "not found. Returning all samples as 'Unconfirmed'"))
+    return(data %>% 
+           select(SampleID = indiv) %>%
+           mutate(Species = "Unconfirmed"))
+  }
+  
+  # Check if indiv column exists
+  if (!"indiv" %in% names(data)) {
+    stop("Column 'indiv' not found in data")
+  }
+  
+  data %>%
+    mutate(
+      Species = case_when(
+        .data[[allele1_col]] == "GA" & .data[[allele2_col]] == "GA" ~ "Chinook",
+        .data[[allele1_col]] == "ND" | .data[[allele2_col]] == "ND" ~ "Unconfirmed",
+        is.na(.data[[allele1_col]]) | is.na(.data[[allele2_col]]) ~ "Unconfirmed",
+        .data[[allele1_col]] != "GA" | .data[[allele2_col]] != "GA" ~ "non-Chinook",
+        TRUE ~ "Error"
+      )
+    ) %>%
+    select(SampleID = indiv, Species)
+}
+
+LFAR_checker <- function(data, diagnostic_loci = c("NC_037130.1:864908.865208", "NC_037130.1:1062935.1063235"), suffix = ".1") {
+  allele1_cols <- diagnostic_loci
+  allele2_cols <- paste0(diagnostic_loci, suffix)
+  all_cols <- c(allele1_cols, allele2_cols)
+  
+  # Ensure all columns exist
+  missing_cols <- setdiff(all_cols, names(data))
+  if (length(missing_cols) > 0) {
+    stop("Missing LFAR check columns: ", paste(missing_cols, collapse = ", "))
+  }
+  
+  data %>%
+    mutate(
+      LFAR_markers_present = if_else(
+        rowSums(!is.na(across(all_of(all_cols))) & across(all_of(all_cols)) != "ND") > 0,
+        TRUE, FALSE
+      )
+    ) %>%
+    select(SampleID = indiv, LFAR_markers_present)
+}
+
+calculate_heterozygosity <- function(data, gen_start_col = 5) {
+  # Calculate heterozygosity for each individual
+  het_data <- data %>%
+    select(indiv, everything()) %>%
+    mutate(
+      heterozygosity = map_dbl(1:n(), function(row_idx) {
+        # Get genetic data for this individual starting from gen_start_col
+        genetic_data <- as.character(unlist(.[row_idx, gen_start_col:ncol(.)]))
+        
+        # Group into pairs (every 2 columns is a locus)
+        n_loci <- length(genetic_data) %/% 2
+        valid_loci <- 0
+        het_loci <- 0
+        
+        for (locus in 1:n_loci) {
+          allele1_idx <- (locus - 1) * 2 + 1
+          allele2_idx <- (locus - 1) * 2 + 2
+          
+          if (allele1_idx <= length(genetic_data) && allele2_idx <= length(genetic_data)) {
+            allele1 <- genetic_data[allele1_idx]
+            allele2 <- genetic_data[allele2_idx]
+            
+            # Check if both alleles are present (not NA or ND)
+            if (!is.na(allele1) && !is.na(allele2) && allele1 != "ND" && allele2 != "ND") {
+              valid_loci <- valid_loci + 1
+              if (allele1 != allele2) {
+                het_loci <- het_loci + 1
+              }
+            }
+          }
+        }
+        
+        # Return proportion of heterozygous loci
+        if (valid_loci > 0) {
+          return(het_loci / valid_loci)
+        } else {
+          return(NA_real_)
+        }
+      })
+    ) %>%
+    select(SampleID = indiv, heterozygosity) %>%
+    mutate(heterozygosity = round(heterozygosity, digits = 3))
+  
+  return(het_data)
+}
+
+
 # Get command-line arguments passed by Nextflow
 args <- commandArgs(trailingOnly = TRUE)
-unks_numgeno <- read_csv(args[1]) %>%
-  mutate_if(is.double, as.integer) %>%
-  mutate_if(is.logical, as.integer) %>%
-  rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%
-  rename_at(vars(ends_with(".2")), ~ str_replace(., "\\.2$", ".1")) %>%
-  mutate(sample_type = "mixture", repunit = NA) %>%
-  rename(collection = group, indiv = indiv.ID) %>%
-  rename_all(~ gsub("-", ".", .)) # dashes not accepted in column names
-ref_baseline <- read_csv(args[2]) %>%
+ref_baseline <- read_csv(args[1]) %>%
   mutate_if(is.double, as.integer) %>%
   rename_all(~ gsub("-", ".", .))
-project_name <- args[3]
+project_name <- args[2]
 
 
-show_missing_data <- as.logical(args[4])
-ots28_info_file <- args[5]
-panel_type <- as.character(args[6])
-unks_alphageno <- args[7] %>%
-  read_tsv() %>%
+show_missing_data <- as.logical(args[3])
+ots28_info_file <- args[4]
+panel_type <- as.character(args[5])
+unks_alphageno <- args[6] %>%
+  read_csv() %>%
   mutate_if(is.factor, as.character) %>%
   mutate_if(is.logical, as.character) %>%
+  mutate(across(everything(), ~ if_else(. == "NA", "ND", .))) %>%
   rename_at(vars(ends_with(".1")), ~ str_remove(., "\\.1$")) %>%
   rename_at(vars(ends_with(".2")), ~ str_replace(., "\\.2$", ".1")) %>%
   mutate(sample_type = "mixture", repunit = NA) %>%
   rename(collection = group, indiv = indiv.ID) %>%
   rename_all(~ gsub("-", ".", .))
+
 
 ots28_missing_threshold <- as.numeric(args[8]) * 100 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain. Multiplied by 100 to get percentage
 gsi_missing_threshold <- as.numeric(args[9]) # If more than this much GSI data is missing, consider GSI data invalid
 #PofZ_threshold <- as.numeric(args[10]) # If the maximum PofZ is less than this, consider the result ambiguous
 #Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
+
 # Parse OTS28 info file ----------------
 
 
 
-if (panel_type == "transition") {
-  unks <- unks_numgeno
-} else if (panel_type == "full") {
+if (panel_type == "full") {
   unks <- unks_alphageno
 } else {
-  stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'transition' or 'full'."))
+  stop(paste0("Panel type ", panel_type, " not recognized. Set panel parameter to 'full'."))
 }
 
 unks <- unks %>%
   mutate(indiv = clean_sample_name(indiv))
+
+
+# Species identification and genetic quality assessment ----------------
+# Run species checker on unknown samples after sample name cleanup
+# This identifies potential non-Chinook samples based on diagnostic locus OkiOts_120255-113
+species_results <- chinook_species_checker(unks)
+
+# Calculate genome-wide heterozygosity for all unknown samples
+# This provides a measure of genetic diversity and can help identify potential issues including non-Chinook samples
+heterozygosity_results <- calculate_heterozygosity(unks)
+
+LFAR_results <- LFAR_checker(unks)
 
 ots28_info <- read_tsv(ots28_info_file) %>%
   mutate(
@@ -288,6 +406,17 @@ mix_results_wide <- all_full_mix_results %>%
     .fns = ~ if_else(is.na(Pop_Structure_ID) | Pop_Structure_ID == "", NA_real_, .)
   ))
 
+mix_results_wide_w_extras <- mix_results_wide %>%
+  left_join(species_results, by = "SampleID") %>%
+  left_join(heterozygosity_results, by = "SampleID") %>%
+  left_join(LFAR_results, by = "SampleID") %>%
+  mutate(
+    final_call = case_when(
+      Species == "non-Chinook" ~ "non-Chinook",
+      (LFAR_markers_present == FALSE) & (final_call %in% c("Fall", "Latefall")) ~ "Fall / Late Fall", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
+      TRUE ~ final_call
+    )
+  )
 write_tsv(
   mix_results_wide,
   file = stringr::str_c(project_name, "_summary.tsv"),

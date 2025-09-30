@@ -27,14 +27,14 @@ process ANALYZE_IDXSTATS {
     library(cowplot)
 
     # Constants
-    TOTAL_PANEL_LOCI <- ${params.n_loci}
+    TOTAL_PANEL_LOCI <- 204
     MIN_READS <- 10
     POOR_PERFORMANCE_THRESHOLD <- 0.5
     
     # Function to process a single idxstats file
     process_idxstats <- function(file, n_loci) {
       df <- read.table(file, nrows = n_loci, stringsAsFactors = FALSE)
-      ind <- str_extract(basename(file), "^[^_]+")
+      ind <- str_remove(basename(file), "_((full|transition)_)?idxstats.txt")
       df\$ind <- ind
       return(df)
     }

@@ -12,7 +12,7 @@
             "properties": {
                 "project": {
                     "type": "string",
-                    "description": "Give a name to this project or run. No spaces or special characters.",
+                    "description": "Give a name to this project or run. No spaces or special characters. This is also used as the output subdirectory name in the results folder.",
                     "default": "YourProject1",
                     "pattern": "^[A-Za-z0-9_-]+$"
                 },
@@ -95,6 +95,32 @@
                 }
             }
         },
+        "microhaplotopia_options": {
+            "title": "Microhaplotopia Options",
+            "type": "object",
+            "description": "Microhaplotopia filtering options",
+            "properties": {
+                "haplotype_depth": {
+                    "type": "integer",
+                    "description": "Haplotype depth filter: remove haplotypes with less than depth specified here",
+                    "help": "This is for removing potential genotyping errors or alleles with depths you don't feel confident about.",
+                    "default": 4
+                },
+                "total_depth": {
+                    "type": "integer",
+                    "description": "Minimum number of reads required for the genotype to be retained",
+                    "default": 8
+                },
+                "allele_balance": {
+                    "type": "number",
+                    "description": "Minimum allele balance required for the genotype to be retained.",
+                    "help": "Ratio of the number of reads for a given microhaplotype divided by the number of reads of the most common microhaplotype for that individual at that locus. For example, if you have a heterozygote with 60 reads for the haplotype AA and 100 reads for the haplotype TC, the allele balance for the haplotype AA for that individual at that locus is 0.6 and is 1.0 for TC.",
+                    "default": 0.35,
+                    "minimum": 0,
+                    "maximum": 1
+                }
+            }
+    },
         "sequoia_options": {
             "title": "Sequoia Options",
             "type": "object",
@@ -103,7 +129,7 @@
                 "use_sequoia": {
                     "type": "boolean",
                     "description": "Enable Sequoia for PBT analysis. If false, the pipeline will not run Sequoia.",
-                    "default": true
+                    "default": false
                 },
                 "sequoia_mode": {
                     "type": "string",
@@ -178,6 +204,9 @@
         },
         {
             "$ref": "#/$defs/processing_options"
+        },
+        {
+            "$ref": "#/$defs/microhaplotopia_options"
         },
         {
             "$ref": "#/$defs/threshold_options"

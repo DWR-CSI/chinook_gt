@@ -11,7 +11,7 @@ clean_sample_name <- function(x) {
     #str_remove("_R\\d+(?:_|$)") %>%  # Remove _R1 or _R1_
     #str_remove("_L\\d+(?:_|$)") %>%  # Remove _L001 or _L001_
     #str_remove("_$") %>%            # Clean up any leftover trailing _
-    str_remove("_.*) %>%            # Remove first _ and all following text
+    str_remove("_.*") %>%            # Remove first _ and all following text
     str_replace_all("-", "_")       # Replace dashes with underscores
 }
 

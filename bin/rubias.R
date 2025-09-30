@@ -96,17 +96,22 @@ LFAR_checker <- function(data, diagnostic_loci = c("NC_037130.1:864908.865208", 
   # Ensure all columns exist
   missing_cols <- setdiff(all_cols, names(data))
   if (length(missing_cols) > 0) {
-    stop("Missing LFAR check columns: ", paste(missing_cols, collapse = ", "))
+    warning("Missing LFAR check columns: ", paste(missing_cols, collapse = ", "))
+    data %>%
+      mutate(
+        LFAR_markers_present = FALSE
+      ) %>%
+      select(SampleID = indiv, LFAR_markers_present)
+  } else {
+    data %>%
+      mutate(
+        LFAR_markers_present = if_else(
+          rowSums(!is.na(across(all_of(all_cols))) & across(all_of(all_cols)) != "ND") > 0,
+          TRUE, FALSE
+        )
+      ) %>%
+      select(SampleID = indiv, LFAR_markers_present)
   }
-  
-  data %>%
-    mutate(
-      LFAR_markers_present = if_else(
-        rowSums(!is.na(across(all_of(all_cols))) & across(all_of(all_cols)) != "ND") > 0,
-        TRUE, FALSE
-      )
-    ) %>%
-    select(SampleID = indiv, LFAR_markers_present)
 }
 
 calculate_heterozygosity <- function(data, gen_start_col = 5) {

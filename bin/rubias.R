@@ -413,18 +413,25 @@ mix_results_wide <- all_full_mix_results %>%
   ))
 
 mix_results_wide_w_extras <- mix_results_wide %>%
+  left_join(RoSA_perc_missing, by = "SampleID") %>%
+  left_join(GSI_perc_missing, by = "SampleID") %>%
   left_join(species_results, by = "SampleID") %>%
   left_join(heterozygosity_results, by = "SampleID") %>%
   left_join(LFAR_results, by = "SampleID") %>%
   mutate(
-    final_call = case_when(
+    Pop_Structure_ID = case_when(
       Species == "non-Chinook" ~ "non-Chinook",
-      (LFAR_markers_present == FALSE) & (final_call %in% c("Fall", "Latefall")) ~ "Fall / Late Fall", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
+      (LFAR_markers_present == FALSE) & (final_call %in% c("FALL", "LATEFALL")) ~ "FALL OR LATEFALL", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
       TRUE ~ final_call
     )
   )
 write_tsv(
   mix_results_wide,
-  file = stringr::str_c(project_name, "_summary.tsv"),
+  file = stringr::str_c(project_name, "_summary_grunID.tsv"),
+  na = ""
+)
+write_tsv(
+  mix_results_wide_w_extras,
+  file = stringr::str_c(project_name, "_summary_extra.tsv"),
   na = ""
 )

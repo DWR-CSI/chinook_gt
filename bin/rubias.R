@@ -421,8 +421,8 @@ mix_results_wide_w_extras <- mix_results_wide %>%
   mutate(
     Pop_Structure_ID = case_when(
       Species == "non-Chinook" ~ "non-Chinook",
-      (LFAR_markers_present == FALSE) & (final_call %in% c("FALL", "LATEFALL")) ~ "FALL OR LATEFALL", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
-      TRUE ~ final_call
+      (LFAR_markers_present == FALSE) & (Pop_Structure_ID %in% c("FALL", "LATEFALL")) ~ "FALL OR LATEFALL", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
+      TRUE ~ Pop_Structure_ID
     )
   )
 write_tsv(

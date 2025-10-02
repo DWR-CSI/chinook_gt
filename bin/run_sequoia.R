@@ -338,6 +338,25 @@ combined_genotypes <- bind_rows(
     offspring_genotypes
 )
 
+# Get loci removal regex from environment variable
+loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
+
+# Print matching columns to be removed
+cols_to_remove <- names(combined_genotypes)[grepl(loci_removal_regex,
+                                                    names(combined_genotypes),
+                                                    perl = TRUE)]
+
+if (length(cols_to_remove) > 0) {
+    cat("Columns to be removed from combined_genotypes:\n")
+    cat(paste(cols_to_remove, collapse = ", "), "\n")
+}
+
+# Remove columns using pre-calculated list
+if (length(cols_to_remove) > 0) {
+    combined_genotypes <- combined_genotypes %>%
+        select(-all_of(cols_to_remove))
+}
+
 allele_dict <- create_allele_dictionary(combined_genotypes)
 write_tsv(allele_dict, paste0(project_name, "_allele_dictionary.txt"))
 major_allele_counts <- convert_to_major_allele_counts(combined_genotypes, allele_dict)

@@ -182,6 +182,8 @@ ots28_missing_threshold <- as.numeric(args[7]) * 100 # If less than this much OT
 gsi_missing_threshold <- as.numeric(args[8]) # If more than this much GSI data is missing, consider GSI data invalid
 PofZ_threshold <- as.numeric(args[9]) # If the maximum PofZ is less than this, consider the result ambiguous
 Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
+
+loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
 # Parse OTS28 info file ----------------
 
 
@@ -235,6 +237,30 @@ if (show_missing_data == TRUE) {
   # Remove columns that are in ref_baseline but missing from unk_match
   ref_match <- ref_baseline %>%
     select(any_of(names(unk_match)))
+}
+
+# Print matching columns to be removed
+cols_to_remove_ref <- names(ref_match)[grepl(loci_removal_regex,names(ref_match),perl = TRUE)]
+cols_to_remove_unk <- names(unk_match)[grepl(loci_removal_regex,names(unk_match),perl = TRUE)]
+
+if (length(cols_to_remove_ref) > 0) {
+  cat("Columns to be removed from ref_match:\n")
+  cat(paste(cols_to_remove_ref, collapse = ", "), "\n")
+}
+
+if (length(cols_to_remove_unk) > 0) {
+  cat("Columns to be removed from unk_match:\n")
+  cat(paste(cols_to_remove_unk, collapse = ", "), "\n")
+}
+
+if (length(cols_to_remove_unk) > 0) {
+  unk_match <- unk_match %>%
+    select(-all_of(cols_to_remove_unk))
+}
+
+if (length(cols_to_remove_ref) > 0) {
+  ref_match <- ref_match %>%
+    select(-all_of(cols_to_remove_ref))
 }
 
 unk_match <- unk_match %>%

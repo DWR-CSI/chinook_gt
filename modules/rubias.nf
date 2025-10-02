@@ -17,6 +17,7 @@ process RUN_RUBIAS {
 
     script:
     """
+    export LOCI_REMOVAL_REGEX='${params.loci_to_remove}'
     rubias.R $baseline ${params.project} ${params.rubias_show_missing_data} ${ots28_report} ${panel} $unknowns_geno ${params.ots28_missing_threshold} ${params.gsi_missing_threshold} ${params.pofz_threshold}
     """
 }

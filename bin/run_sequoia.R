@@ -341,10 +341,25 @@ combined_genotypes <- bind_rows(
 # Get loci removal regex from environment variable
 loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
 
+# Handle empty regex - if empty, set to pattern that matches nothing
+if (loci_removal_regex == "") {
+    loci_removal_regex <- "^$"
+    cat("No loci removal regex specified - no loci will be removed\n")
+}
+
 # Print matching columns to be removed
-cols_to_remove <- names(combined_genotypes)[grepl(loci_removal_regex,
-                                                    names(combined_genotypes),
-                                                    perl = TRUE)]
+cols_to_remove <- tryCatch(
+    names(combined_genotypes)[grepl(loci_removal_regex,
+                                     names(combined_genotypes),
+                                     perl = TRUE)],
+    error = function(e) {
+        cat("Invalid loci removal regex pattern: ", loci_removal_regex, "\n")
+        cat("Error: ", e$message, "\n")
+        cat("No loci will be removed\n")
+        loci_removal_regex <<- "^$"
+        character(0)
+    }
+)
 
 if (length(cols_to_remove) > 0) {
     cat("Columns to be removed from combined_genotypes:\n")

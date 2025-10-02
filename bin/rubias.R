@@ -183,7 +183,15 @@ gsi_missing_threshold <- as.numeric(args[8]) # If more than this much GSI data i
 PofZ_threshold <- as.numeric(args[9]) # If the maximum PofZ is less than this, consider the result ambiguous
 Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
 
+# Get loci removal regex from environment variable
 loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
+
+# Handle empty regex - if empty, set to pattern that matches nothing
+if (loci_removal_regex == "") {
+  loci_removal_regex <- "^$"
+  cat("No loci removal regex specified - no loci will be removed\n")
+}
+
 # Parse OTS28 info file ----------------
 
 
@@ -240,8 +248,24 @@ if (show_missing_data == TRUE) {
 }
 
 # Print matching columns to be removed
-cols_to_remove_ref <- names(ref_match)[grepl(loci_removal_regex,names(ref_match),perl = TRUE)]
-cols_to_remove_unk <- names(unk_match)[grepl(loci_removal_regex,names(unk_match),perl = TRUE)]
+cols_to_remove_ref <- tryCatch(
+  names(ref_match)[grepl(loci_removal_regex, names(ref_match),
+                          perl = TRUE)],
+  error = function(e) {
+    cat("Invalid loci removal regex pattern: ", loci_removal_regex, "\n")
+    cat("Error: ", e$message, "\n")
+    cat("No loci will be removed\n")
+    loci_removal_regex <<- "^$"
+    character(0)
+  }
+)
+cols_to_remove_unk <- tryCatch(
+  names(unk_match)[grepl(loci_removal_regex, names(unk_match),
+                          perl = TRUE)],
+  error = function(e) {
+    character(0)
+  }
+)
 
 if (length(cols_to_remove_ref) > 0) {
   cat("Columns to be removed from ref_match:\n")

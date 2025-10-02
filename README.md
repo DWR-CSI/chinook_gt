@@ -9,6 +9,27 @@ Currently, this pipeline is optimized for use with Microsoft Azure Batch (and ot
 
 Prior to running the primary `main.nf` workflow, simply ensure that the parameters and paths specified in the configuration files located at `nextflow.config`, `conf/azure.config` (or your preferred profile), and `~/.nextflow/config` are correct for your setup. You can then run `main.nf` with Nextflow while specifying a `.yml` parameters file corresponding to your run. See [examples/settings/full_settings.yml](settings.yml) for an example params-file.
 
+### Loci Removal
+
+The pipeline supports removing specific loci from analysis using the `loci_to_remove` parameter. This uses Perl-compatible regular expressions to match loci column names.
+
+**How it works:**
+- The regex pattern is matched against these column names in both RUBIAS and Sequoia analyses
+- Matched loci are removed before Rubias and Sequoia analyses begins, but after the point of haplotype/genotype generation.
+
+**Configuration:**
+In your parameters YAML file:
+```yaml
+loci_to_remove: "(NC_037130\\.1:1062935-1063235)|(NC_037130\\.1:864908-865208)|(NC_037104\\.1:56552952-56553042)"
+```
+
+**Notes:**
+- Leave empty (`""`) to remove no loci
+- Use Perl-compatible regex syntax
+- Cannot contain single quotes
+- Backslashes must be escaped (use `\\.` to match a literal period)
+- Invalid patterns will be caught and no loci will be removed
+
 Example usage:
 
 ```

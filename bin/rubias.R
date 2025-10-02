@@ -412,26 +412,26 @@ mix_results_wide <- all_full_mix_results %>%
     .fns = ~ if_else(is.na(Pop_Structure_ID) | Pop_Structure_ID == "", NA_real_, .)
   ))
 
-mix_results_wide_w_extras <- mix_results_wide %>%
-  left_join(RoSA_perc_missing, by = "SampleID") %>%
-  left_join(GSI_perc_missing, by = "SampleID") %>%
-  left_join(species_results, by = "SampleID") %>%
-  left_join(heterozygosity_results, by = "SampleID") %>%
-  left_join(LFAR_results, by = "SampleID") %>%
-  mutate(
-    Pop_Structure_ID = case_when(
-      Species == "non-Chinook" ~ "non-Chinook",
-      (LFAR_markers_present == FALSE) & (Pop_Structure_ID %in% c("FALL", "LATEFALL")) ~ "FALL OR LATEFALL", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
-      TRUE ~ Pop_Structure_ID
-    )
-  )
+# mix_results_wide_w_extras <- mix_results_wide %>%
+#   left_join(RoSA_perc_missing, by = "SampleID") %>%
+#   left_join(GSI_perc_missing, by = "SampleID") %>%
+#   left_join(species_results, by = "SampleID") %>%
+#   left_join(heterozygosity_results, by = "SampleID") %>%
+#   left_join(LFAR_results, by = "SampleID") %>%
+#   mutate(
+#     Pop_Structure_ID = case_when(
+#       Species == "non-Chinook" ~ "non-Chinook",
+#       (LFAR_markers_present == FALSE) & (Pop_Structure_ID %in% c("FALL", "LATEFALL")) ~ "FALL OR LATEFALL", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
+#       TRUE ~ Pop_Structure_ID
+#     )
+#   )
 write_tsv(
   mix_results_wide,
   file = stringr::str_c(project_name, "_summary_grunID.tsv"),
   na = ""
 )
-write_tsv(
-  mix_results_wide_w_extras,
-  file = stringr::str_c(project_name, "_summary_extra.tsv"),
-  na = ""
-)
+# write_tsv(
+#   mix_results_wide_w_extras,
+#   file = stringr::str_c(project_name, "_summary_extra.tsv"),
+#   na = ""
+# )

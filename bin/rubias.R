@@ -427,7 +427,7 @@ mix_results_wide <- all_full_mix_results %>%
 #   )
 write_tsv(
   mix_results_wide,
-  file = stringr::str_c(project_name, "_summary_grunID.tsv"),
+  file = stringr::str_c(project_name, "_summary.tsv"),
   na = ""
 )
 # write_tsv(

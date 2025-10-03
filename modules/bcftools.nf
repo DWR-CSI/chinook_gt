@@ -12,17 +12,9 @@ process BCFTOOLS_MPILEUP {
     
     output:
     tuple val(reference), path("${params.project}_${reference}.vcf"), emit: vcf
-    tuple val(reference), path("${params.project}_${reference}.filtered.vcf"), emit: filtered_vcf, optional: true
+    tuple val(reference), path("${params.project}_${reference}.filtered.vcf"), emit: filtered_vcf
     
     script:
-    def filter_cmd = (reference == "transition" || reference == "full") ?
-        """
-        bcftools view --exclude-types indels ${params.project}_${reference}.vcf \
-        | bcftools +setGT - -- -t q -i 'FORMAT/DP<5 || QUAL<20' -n . \
-        > ${params.project}_${reference}.filtered.vcf
-        """ :
-        ""
-
     """
     bcftools mpileup -a AD,DP,INFO/AD \
         -B -q 20 -Q 20 \
@@ -33,6 +25,8 @@ process BCFTOOLS_MPILEUP {
         | bcftools norm -m +any -f ${ref} \
         > ${params.project}_${reference}.vcf
     
-    ${filter_cmd}
+    bcftools view --exclude-types indels ${params.project}_${reference}.vcf \
+        | bcftools +setGT - -- -t q -i 'FORMAT/DP<5 || QUAL<20' -n . \
+        > ${params.project}_${reference}.filtered.vcf
     """
 }

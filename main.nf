@@ -28,6 +28,7 @@ params.species_min_repro_age = params.species_min_repro_age ?: 1
 params.haplotype_depth = params.haplotype_depth ?: 4
 params.total_depth = params.total_depth ?: 8
 params.allele_balance = params.allele_balance ?: 0.35
+params.loci_to_remove = params.loci_to_remove ?: ""
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -128,6 +129,7 @@ workflow {
     Sequoia Missing Threshold: ${params.sequoia_missing_threshold}
     Species Max Repro Age   : ${params.species_max_repro_age}
     Species Min Repro Age   : ${params.species_min_repro_age}
+    Loci Removal Regex    : ${params.loci_to_remove ?: 'None specified'}
 
     ==============================================
     """

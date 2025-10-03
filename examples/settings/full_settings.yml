@@ -1,7 +1,0 @@
-# Input
-input: "az://nextflow/raw_data/L0013/*_L001_R{1,2}_001.fastq.gz"
-project: 'ADPH_L0013'
-outdir: 'az://nextflow/results/chinookGT_full'
-reporting_groups: '4'
-panel: 'full'
-ots28_baseline: 'az://nextflow/reference/full_panel/RoSA_baseline_partial_infile.txt'

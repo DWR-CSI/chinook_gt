@@ -26,7 +26,7 @@ This Nextflow pipeline takes .FASTQ files as input and produces Chinook run iden
 ## Setup
 Currently, this pipeline is optimized for use with Microsoft Azure Batch (and other clouds) but can/will be adapted for use with HPC systems by specifying Singularity containers instead of Docker containers.
 
-Prior to running the primary `main.nf` workflow, simply ensure that the parameters and paths specified in the configuration files located at `nextflow.config`, `conf/azure.config` (or your preferred profile), and `~/.nextflow/config` are correct for your setup. You can then run `main.nf` with Nextflow while specifying a `.yml` parameters file corresponding to your run. See [examples/settings/full_settings.yml](examples/settings/full_settings.yml) for an example params-file.
+Prior to running the primary `main.nf` workflow, simply ensure that the parameters and paths specified in the configuration files located at `nextflow.config`, `conf/azure.config` (or your preferred profile), and `~/.nextflow/config` are correct for your setup. You can then run `main.nf` with Nextflow while specifying a `.yml` parameters file corresponding to your run. See [examples/settings/test_settings.yml](examples/settings/test_settings.yml) for an example params-file.
 
 ## Usage
 
@@ -185,8 +185,10 @@ The pipeline supports removing specific loci from analysis using the `loci_to_re
 **Configuration:**
 In your parameters YAML file:
 ```yaml
-loci_to_remove: "(NC_037130\\.1:1062935-1063235)|(NC_037130\\.1:864908-865208)|(NC_037104\\.1:56552952-56553042)"
+loci_to_remove: "(NC_037130\\.1:1062935[.-]1063235)|(NC_037130\\.1:864908[.-]865208)|(NC_037104\\.1:56552952[.-]56553042)"
 ```
+
+Note that, above, the pattern `[.-]` is used to match either a period or a dash since the rubias.R script converts dashes to periods, but the Sequoia script and others may not.
 
 **Notes:**
 - Leave empty (`""`) to remove no loci

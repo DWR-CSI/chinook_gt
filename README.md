@@ -204,7 +204,7 @@ The pipeline produces various intermediate and final files in the output directo
 ### Output Directory Structure
 
 ```
-results/
+results (user-specified name)/
 ├── {project_name}/
 │   ├── fastqc/              # Quality control reports for raw reads
 │   ├── trimmomatic/         # Trimmed read files

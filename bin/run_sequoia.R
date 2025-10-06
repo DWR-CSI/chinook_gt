@@ -274,49 +274,6 @@ offspring_genotypes <- offspring_genotypes_path %>%
     } %>%
     rename(SAMPLE_ID = indiv.ID)
 
-# ==============================================================================
-# TESTING MODE - Set to TRUE to use hardcoded test data instead of command line args
-# ==============================================================================
-TESTING_MODE <- FALSE
-
-if (TESTING_MODE) {
-    cat("Running in TESTING MODE - using hardcoded test data\n")
-
-    sequoia_mode <- "par"
-    reference_parental_genotypes <- "examples/PBT/FRH2024_reference_genotypes.txt" %>%
-        read_tsv(col_types = cols(
-            .default = col_character(),
-            SAMPLE_ID = col_character()
-        ))
-    reference_parental_lifehistory <- "examples/PBT/FRH2024_reference_lifehistory.txt" %>%
-        read_tsv(
-            col_types = cols(
-                .default = col_character(),
-                ID = col_character(),
-                Sex = col_integer(),
-                BirthYear = col_integer(),
-                BY.min = col_integer(),
-                BY.max = col_integer(),
-                Year.last = col_integer()
-            )
-        ) %>%
-        mutate(
-            BirthYear = 2021,
-            BY.min = NA_integer_,
-            BY.max = NA_integer_
-        )
-    offspring_genotypes <- "examples/PBT/FRH_sim_genos.txt" %>%
-        read_tsv(col_types = cols(
-            .default = col_character(),
-            SAMPLE_ID = col_character()
-        ))
-    offspring_birthyear <- safe_as_integer("unknown", "offspring_birthyear")
-    offspring_minBY <- safe_as_integer("unknown", "offspring_minBY")
-    offspring_maxBY <- safe_as_integer("2025", "offspring_maxBY")
-    max_age <- safe_as_integer("1", "max_age")
-    project_name <- "test"
-}
-
 # Main execution
 offspring_lh <- tibble(
     ID = offspring_genotypes$SAMPLE_ID,

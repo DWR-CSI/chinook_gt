@@ -15,6 +15,14 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// Validate required parameters
+if (!params.outdir) {
+    error "ERROR: --outdir parameter is required. Please specify an output directory."
+}
+if (!params.project) {
+    error "ERROR: --project parameter is required. Please specify a project name."
+}
+
 // Set default values for thresholds if not specified in configs
 params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
 params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
@@ -28,6 +36,7 @@ params.species_min_repro_age = params.species_min_repro_age ?: 1
 params.haplotype_depth = params.haplotype_depth ?: 4
 params.total_depth = params.total_depth ?: 8
 params.allele_balance = params.allele_balance ?: 0.35
+params.loci_to_remove = params.loci_to_remove ?: ""
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -128,6 +137,7 @@ workflow {
     Sequoia Missing Threshold: ${params.sequoia_missing_threshold}
     Species Max Repro Age   : ${params.species_max_repro_age}
     Species Min Repro Age   : ${params.species_min_repro_age}
+    Loci Removal Regex    : ${params.loci_to_remove ?: 'None specified'}
 
     ==============================================
     """
@@ -198,9 +208,8 @@ workflow {
         ots28_baseline_file = params.ots28_baseline
     } else {
         ots28_baseline_file = "${projectDir}/data/baselines/full/RoSA_baseline_partial_infile.txt"
-        log.info "No OTS28 baseline for Structure provided, using default: ${baseline_file}"
+        log.info "No OTS28 baseline for Structure provided, using default: ${ots28_baseline_file}"
     }
-    baseline_ch = channel.fromPath(baseline_file, checkIfExists: true)
     ots28_baseline_ch = channel.fromPath(ots28_baseline_file, checkIfExists: true)
 
     def rosa_allele_key_file
@@ -311,7 +320,7 @@ workflow {
     // Collect all idxstats files
     idxstats_files_sorted = SAMTOOLS.out.idxstats
         .branch { 
-            main: it[1] =~ /transition|full/
+            main: it[1] ==~ /transition|full/
             other: true
             }
 
@@ -340,12 +349,12 @@ workflow {
         .join(bai_by_ref)
     
     mpileup_input = combined_bam_files
-        .map { reference, bams, bais -> 
+        .map { reference, bams, bais ->
             def ref_file = reference_files
                 .collect { file(it) }
                 .find { it.simpleName == reference } // Find the reference file by name. Index files have a simplename that does not match.
             if (!ref_file) {
-                error "No exact match found for reference: ${reference}"
+                error "No exact match found for reference: ${reference}. Use 'full' as the reference panel."
             }
             tuple(reference, bams, bais, ref_file)
         }

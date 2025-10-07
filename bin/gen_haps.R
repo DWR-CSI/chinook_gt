@@ -43,7 +43,7 @@ write_csv(hap, unfiltered_output_filename) # Don't need to drop first column dow
 hap_fil <- filter_raw_microhap_data( # Filter based on depth and allele balance
   hap,
   haplotype_depth = min_hap_depth,
-  total_depth = min_depth, 
+  total_depth = min_depth,
   allele_balance = allele_balance_param
 )
 

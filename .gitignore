@@ -8,3 +8,4 @@ work/*
 output/*
 *.log*
 .vscode/*
+test/*

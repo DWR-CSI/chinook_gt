@@ -274,49 +274,6 @@ offspring_genotypes <- offspring_genotypes_path %>%
     } %>%
     rename(SAMPLE_ID = indiv.ID)
 
-# ==============================================================================
-# TESTING MODE - Set to TRUE to use hardcoded test data instead of command line args
-# ==============================================================================
-TESTING_MODE <- FALSE
-
-if (TESTING_MODE) {
-    cat("Running in TESTING MODE - using hardcoded test data\n")
-
-    sequoia_mode <- "par"
-    reference_parental_genotypes <- "examples/PBT/FRH2024_reference_genotypes.txt" %>%
-        read_tsv(col_types = cols(
-            .default = col_character(),
-            SAMPLE_ID = col_character()
-        ))
-    reference_parental_lifehistory <- "examples/PBT/FRH2024_reference_lifehistory.txt" %>%
-        read_tsv(
-            col_types = cols(
-                .default = col_character(),
-                ID = col_character(),
-                Sex = col_integer(),
-                BirthYear = col_integer(),
-                BY.min = col_integer(),
-                BY.max = col_integer(),
-                Year.last = col_integer()
-            )
-        ) %>%
-        mutate(
-            BirthYear = 2021,
-            BY.min = NA_integer_,
-            BY.max = NA_integer_
-        )
-    offspring_genotypes <- "examples/PBT/FRH_sim_genos.txt" %>%
-        read_tsv(col_types = cols(
-            .default = col_character(),
-            SAMPLE_ID = col_character()
-        ))
-    offspring_birthyear <- safe_as_integer("unknown", "offspring_birthyear")
-    offspring_minBY <- safe_as_integer("unknown", "offspring_minBY")
-    offspring_maxBY <- safe_as_integer("2025", "offspring_maxBY")
-    max_age <- safe_as_integer("1", "max_age")
-    project_name <- "test"
-}
-
 # Main execution
 offspring_lh <- tibble(
     ID = offspring_genotypes$SAMPLE_ID,
@@ -337,6 +294,40 @@ combined_genotypes <- bind_rows(
     reference_parental_genotypes,
     offspring_genotypes
 )
+
+# Get loci removal regex from environment variable
+loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
+
+# Handle empty regex - if empty, set to pattern that matches nothing
+if (loci_removal_regex == "") {
+    loci_removal_regex <- "^$"
+    cat("No loci removal regex specified - no loci will be removed\n")
+}
+
+# Print matching columns to be removed
+cols_to_remove <- tryCatch(
+    names(combined_genotypes)[grepl(loci_removal_regex,
+                                     names(combined_genotypes),
+                                     perl = TRUE)],
+    error = function(e) {
+        cat("Invalid loci removal regex pattern: ", loci_removal_regex, "\n")
+        cat("Error: ", e$message, "\n")
+        cat("No loci will be removed\n")
+        loci_removal_regex <<- "^$"
+        character(0)
+    }
+)
+
+if (length(cols_to_remove) > 0) {
+    cat("Columns to be removed from combined_genotypes:\n")
+    cat(paste(cols_to_remove, collapse = ", "), "\n")
+}
+
+# Remove columns using pre-calculated list
+if (length(cols_to_remove) > 0) {
+    combined_genotypes <- combined_genotypes %>%
+        select(-all_of(cols_to_remove))
+}
 
 allele_dict <- create_allele_dictionary(combined_genotypes)
 write_tsv(allele_dict, paste0(project_name, "_allele_dictionary.txt"))

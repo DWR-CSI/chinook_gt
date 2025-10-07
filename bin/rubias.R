@@ -7,10 +7,12 @@ library(rubias)
 # Functions ------------
 clean_sample_name <- function(x) {
   x %>%
-    str_remove("_$") %>% # Remove trailing underscore
-    str_remove("_S\\d+_?$") %>% # Remove _S123_ suffix
-    str_remove("_R\\d+_?$") %>% # Remove _R123_ suffix
-    str_remove("_L\\d+_?$") # Remove _L123_ suffix
+    #str_remove("_S\\d+(?:_|$)") %>%  # Remove _S123 or _S123_
+    #str_remove("_R\\d+(?:_|$)") %>%  # Remove _R1 or _R1_
+    #str_remove("_L\\d+(?:_|$)") %>%  # Remove _L001 or _L001_
+    #str_remove("_$") %>%            # Clean up any leftover trailing _
+    str_remove("_.*") %>%            # Remove first _ and all following text
+    str_replace_all("-", "_")       # Replace dashes with underscores
 }
 
 all_na_cols <- function(df) {
@@ -226,7 +228,7 @@ ots28_info <- read_tsv(ots28_info_file) %>%
   mutate(
     indiv = clean_sample_name(indiv),
     RoSA = case_when(
-      ots28_missing >= ots28_missing_threshold ~ "Uncertain",
+      ots28_missing >= ots28_missing_threshold ~ NA_character_,
       RoSA == "Uncertain" & ots28_missing < ots28_missing_threshold ~ "Intermediate",
       TRUE ~ RoSA
     )
@@ -363,6 +365,14 @@ all_full_mix_results <- all_full_mix_est$indiv_posteriors %>%
 
 write_tsv(all_full_mix_est$indiv_posteriors, file = stringr::str_c(project_name, "_full_mix_posteriors.tsv"))
 
+all_full_mix_wide <- all_full_mix_est_indiv_posteriors %>%
+  select(indiv, collection, PofZ) %>%
+  pivot_wider(
+    names_from = collection,
+    values_from = PofZ
+  ) %>%
+  rename(SampleID = indiv) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 3)))
 
 ### export all the PofZ for each repunit
 
@@ -373,15 +383,10 @@ repunit_calls <- all_full_mix_results %>%
   mutate(
     fraction_missing = n_miss_loci / (n_miss_loci + n_non_miss_loci),
     final_call = case_when(
-      (fraction_missing > gsi_missing_threshold) & (RoSA == "Late") ~ "Fall / Late Fall",
-      (fraction_missing > gsi_missing_threshold) & (RoSA == "Early") ~ "Spring / Winter",
-      fraction_missing > gsi_missing_threshold ~ "Missing Data",
-      (Prob_repunit < PofZ_threshold) & (RoSA == "Early") ~ "Mixed Spring",
-      (Prob_repunit < PofZ_threshold) & (RoSA == "Late") ~ "Mixed Fall / Late Fall",
-      Prob_repunit < PofZ_threshold ~ "Mixed",
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "spring",
+      fraction_missing > gsi_missing_threshold ~ NA_character_,
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "Spring",
       (RoSA == "Late") & (repunit == "spring") ~ "Fall",
-      (fraction_missing < gsi_missing_threshold) ~ repunit,
+      fraction_missing < gsi_missing_threshold ~ repunit,
       TRUE ~ "Assignment Error"
     )
   ) %>%
@@ -399,8 +404,8 @@ raw_repunit_probs <- all_full_mix_results %>%
   left_join(ots28_info, by = "indiv") %>%
   mutate(
     tributary = case_when(
-      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & (Prob_repunit >= PofZ_threshold) & ((n_miss_loci / (n_miss_loci + n_non_miss_loci)) < gsi_missing_threshold) ~ "Feather River Spring",
-      (RoSA == "Late") & (repunit == "spring") & (Prob_repunit > PofZ_threshold) ~ NA_character_,
+      (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & ((n_miss_loci / (n_miss_loci + n_non_miss_loci)) < gsi_missing_threshold) ~ "Feather River Spring",
+      (RoSA == "Late") & (repunit == "spring") ~ NA_character_,
       repunit == "spring" ~ collection,
       TRUE ~ NA_character_
     ),
@@ -417,6 +422,7 @@ mix_results_wide <- all_full_mix_results %>%
   spread(repunit, Prob_repunit) %>%
   group_by(indiv) %>%
   left_join(ots28_info, by = "indiv") %>% # add in the OTS28 info
+  mutate(RoSA = if_else(RoSA == "Intermediate", "Heterozygote", RoSA)) %>% #convert "Intermediate" to "Heterozygote"
   left_join(repunit_calls %>% ungroup() %>% select(indiv, fraction_missing, final_call, probability = prob_repunit), by = "indiv") %>% # add in the final calls
   mutate(across(
     matches("spring|winter|fall|late"),
@@ -431,40 +437,49 @@ mix_results_wide <- all_full_mix_results %>%
     ~ round(., digits = 2)
   )) %>% # Round to 2 decimal places
   mutate(
-    GSI_perc_missing = round(fraction_missing * 100, digits = 1),
-    ots28_missing = round(ots28_missing, digits = 1),
+    #GSI_perc_missing = round(fraction_missing * 100, digits = 1),
+    #ots28_missing = round(ots28_missing, digits = 1),
     probability = if_else((final_call != "Missing Data"), round(probability, digits = 3), NA_real_)
   ) %>%
+  mutate(across(c(RoSA, final_call), toupper)) %>%
   select(
     SampleID = indiv,
-    RoSA,
-    RoSA_perc_missing = ots28_missing,
-    GSI_perc_missing,
-    Fall = fall,
-    Late_fall = latefall,
-    Spring = spring,
-    Winter = winter,
-    final_call,
-    probability
+    Gtseq_Chr28_Geno = RoSA,
+    #RoSA_perc_missing = ots28_missing,
+    Pop_Structure_ID = final_call,
+    #GSI_perc_missing,
+    CV_Fall = fall,
+    CV_Late_Fall = latefall,
+    CV_Spring = spring,
+    CV_Winter = winter
   ) %>%
-  left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID") %>%
-  mutate(
-    trib_PofZ = if_else(!(final_call %in% c("Missing Data", "Fall / Late Fall", "Spring / Winter")), round(trib_PofZ, digits = 3), NA_real_),
-    final_call = str_to_title(final_call)
-  )
+  left_join(raw_repunit_probs %>% select(SampleID = indiv, Tributary = tributary), by = "SampleID") %>%
+  left_join(all_full_mix_wide, by = "SampleID") %>%
+  mutate(across(
+    .cols = ButteFall:SacWin,
+    .fns = ~ if_else(is.na(Pop_Structure_ID) | Pop_Structure_ID == "", NA_real_, .)
+  ))
 
-mix_results_wide_w_extras <- mix_results_wide %>%
-  left_join(species_results, by = "SampleID") %>%
-  left_join(heterozygosity_results, by = "SampleID") %>%
-  left_join(LFAR_results, by = "SampleID") %>%
-  mutate(
-    final_call = case_when(
-      Species == "non-Chinook" ~ "non-Chinook",
-      (LFAR_markers_present == FALSE) & (final_call %in% c("Fall", "Latefall")) ~ "Fall / Late Fall", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
-      TRUE ~ final_call
-    )
-  )
+# mix_results_wide_w_extras <- mix_results_wide %>%
+#   left_join(RoSA_perc_missing, by = "SampleID") %>%
+#   left_join(GSI_perc_missing, by = "SampleID") %>%
+#   left_join(species_results, by = "SampleID") %>%
+#   left_join(heterozygosity_results, by = "SampleID") %>%
+#   left_join(LFAR_results, by = "SampleID") %>%
+#   mutate(
+#     Pop_Structure_ID = case_when(
+#       Species == "non-Chinook" ~ "non-Chinook",
+#       (LFAR_markers_present == FALSE) & (Pop_Structure_ID %in% c("FALL", "LATEFALL")) ~ "FALL OR LATEFALL", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
+#       TRUE ~ Pop_Structure_ID
+#     )
+#   )
 write_tsv(
-  mix_results_wide_w_extras,
-  file = stringr::str_c(project_name, "_summary.tsv")
+  mix_results_wide,
+  file = stringr::str_c(project_name, "_summary.tsv"),
+  na = ""
 )
+# write_tsv(
+#   mix_results_wide_w_extras,
+#   file = stringr::str_c(project_name, "_summary_extra.tsv"),
+#   na = ""
+# )

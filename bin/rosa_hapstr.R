@@ -31,7 +31,7 @@ analyze_run_timing <- function(ptypes, threshold_het = 0.5, min_EL_markers = 3, 
 
             # Make run timing calls
             timing_call = case_when(
-                total_scored < min_EL_markers ~ "Insufficient_Data",
+                EL_total_scored < min_EL_markers ~ "Insufficient_Data",
                 het_prop >= threshold_het ~ "Intermediate", # Not distinguished from mixed non-hets
                 timing_score > 0.5 ~ "Early",
                 timing_score < -0.5 ~ "Late",

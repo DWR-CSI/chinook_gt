@@ -37,6 +37,9 @@ params.haplotype_depth = params.haplotype_depth ?: 4
 params.total_depth = params.total_depth ?: 8
 params.allele_balance = params.allele_balance ?: 0.35
 params.loci_to_remove = params.loci_to_remove ?: ""
+params.male_sexid_threshold = params.male_sexid_threshold ?: 0.02
+params.female_sexid_threshold = params.female_sexid_threshold ?: 0.002
+params.sexid_min_reads = params.sexid_min_reads ?: 10000
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -129,6 +132,10 @@ workflow {
     OTS28 Missing Threshold : ${params.ots28_missing_threshold}
     GSI Missing Threshold   : ${params.gsi_missing_threshold}
     PofZ Threshold          : ${params.pofz_threshold}
+    Sex ID Parameters:
+    Male Sex ID Threshold   : ${params.male_sexid_threshold}
+    Female Sex ID Threshold : ${params.female_sexid_threshold}
+    Sex ID Min Reads        : ${params.sexid_min_reads}
     Other parameters:
     Concatenate All Reads   : ${params.concat_all_reads}
     Sequoia Parameters:

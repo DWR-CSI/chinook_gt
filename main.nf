@@ -401,7 +401,7 @@ workflow {
     GEN_HAPS(PREP_MHP_RDS.out.rds)
 
     // Run Rubias analyses
-    RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps)
+    RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps, ANALYZE_IDXSTATS.out.sexid)
 
     // Run PBT analysis
     if (params.use_sequoia) {

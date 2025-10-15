@@ -15,6 +15,7 @@ process ANALYZE_IDXSTATS {
     path "*.{pdf,jpg,png}", emit: plots
     path "reads_matrix.txt", emit: matrix
     path "*.{csv,txt}", emit: loci_qc
+    path "sex_id_results.tsv", emit: sexid
     
     script:
     """
@@ -30,13 +31,38 @@ process ANALYZE_IDXSTATS {
     TOTAL_PANEL_LOCI <- 204
     MIN_READS <- 10
     POOR_PERFORMANCE_THRESHOLD <- 0.5
-    
+    sex_id_male_threshold <- $params.male_sexid_threshold # must have more than this many sdy_I183 reads mapped
+    sex_id_min_total_reads <- $params.sexid_min_reads # must have at least this many total reads mapped or else sample is unknown sex
+    sex_id_female_threshold <- $params.female_sexid_threshold # must have fewer than this many sdy_I183 reads mapped
+
+    ## Functions ---------------
     # Function to process a single idxstats file
     process_idxstats <- function(file, n_loci) {
       df <- read.table(file, nrows = n_loci, stringsAsFactors = FALSE)
       ind <- str_remove(basename(file), "_((full|transition)_)?idxstats.txt")
       df\$ind <- ind
       return(df)
+    }
+
+    # Sex ID function
+    determine_sex <- function(df, sexid_locus = "sdy_I183", min_total_reads, min_male_prop, max_female_prop) {
+      total_read_counts <- df %>%
+        group_by(ind) %>%
+        summarize(total_reads = sum(reads))
+      sex_marker_reads <- df %>%
+        filter(loc == sexid_locus) %>%
+        select(ind, sex_marker_reads = reads)
+      sex_id_df <- total_read_counts %>%
+        left_join(sex_marker_reads, by = 'ind') %>%
+        mutate(
+          sex_marker_read_prop = sex_marker_reads / total_reads,
+          inferred_sex = case_when(
+            sex_marker_read_prop > min_male_prop & total_reads > min_total_reads ~ "Male",
+            sex_marker_read_prop < max_female_prop & total_reads > min_total_reads ~ "Female",
+            TRUE ~ "Unknown"
+            )
+          )
+      return(sex_id_df)
     }
     
     # List all idxstats files in the input directory
@@ -65,7 +91,15 @@ process ANALYZE_IDXSTATS {
         loc = factor(loc, levels = locs\$loc),
         ind = factor(ind, levels = inds\$ind)
       )
-    
+    # Generate Sex ID info
+    sex_id_info <- determine_sex(
+      idx_df,
+      min_total_reads = sex_id_min_total_reads,
+      min_male_prop = sex_id_male_threshold,
+      max_female_prop = sex_id_female_threshold
+      )
+    write_tsv(sex_id_info, "sex_id_results.tsv")
+
     # Generate idxstats plots
     plot_reads_by_ind <- ggplot(idx_df, aes(x = ind, y = reads)) +
       geom_col(fill = "lightblue", colour = "black") +

@@ -100,6 +100,33 @@
                 }
             }
         },
+        "sexid_threshold_options": {
+            "title": "Sex ID Threshold Options",
+            "type": "object",
+            "description": "Options for threshold values used in sex identification.",
+            "properties": {
+                "male_sexid_threshold": {
+                    "type": "number",
+                    "description": "Minimum proportion of reads mapped to the Y chromosome (sdy_I183 locus) to classify a sample as male",
+                    "default": 0.02,
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "female_sexid_threshold": {
+                    "type": "number",
+                    "description": "Maximum proportion of reads mapped to the Y chromosome (sdy_I183 locus) to classify a sample as female",
+                    "default": 0.002,
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "sexid_min_reads": {
+                    "type": "number",
+                    "description": "Minimum number of reads required to confidently assign a sex ID.",
+                    "default": 10000,
+                    "minimum": 0
+                }
+            }
+        },
         "microhaplotopia_options": {
             "title": "Microhaplotopia Options",
             "type": "object",
@@ -209,6 +236,9 @@
         },
         {
             "$ref": "#/$defs/processing_options"
+        },
+        {
+            "$ref": "#/$defs/sexid_threshold_options"
         },
         {
             "$ref": "#/$defs/microhaplotopia_options"

@@ -187,6 +187,7 @@ ots28_missing_threshold <- as.numeric(args[7]) * 100 # If less than this much OT
 gsi_missing_threshold <- as.numeric(args[8]) # If more than this much GSI data is missing, consider GSI data invalid
 PofZ_threshold <- as.numeric(args[9]) # If the maximum PofZ is less than this, consider the result ambiguous
 Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
+sex_id_file <- args[10] # Sex ID results file from idxstats analysis
 
 # Get loci removal regex from environment variable
 loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
@@ -196,6 +197,11 @@ if (loci_removal_regex == "") {
   loci_removal_regex <- "^$"
   cat("No loci removal regex specified - no loci will be removed\n")
 }
+
+# Read sex ID results
+sex_id_results <- read_tsv(sex_id_file) %>%
+  mutate(ind = clean_sample_name(ind)) %>%
+  select(SampleID = ind, inferred_sex)
 
 # Parse OTS28 info file ----------------
 
@@ -457,13 +463,15 @@ mix_results_wide_w_extras <- mix_results_wide %>%
   left_join(species_results, by = "SampleID") %>%
   left_join(heterozygosity_results, by = "SampleID") %>%
   left_join(LFAR_results, by = "SampleID") %>%
+  left_join(sex_id_results, by = "SampleID") %>%
   mutate(
     final_call = case_when(
       Species == "non-Chinook" ~ "non-Chinook",
       (LFAR_markers_present == FALSE) & (final_call %in% c("Fall", "Latefall")) ~ "Fall / Late Fall", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
       TRUE ~ final_call
     )
-  )
+  ) %>%
+  select(SampleID, RoSA, RoSA_perc_missing, GSI_perc_missing, Fall, Late_fall, Spring, Winter, final_call, probability, tributary, trib_PofZ, Species, heterozygosity, LFAR_markers_present, inferred_sex)
 write_tsv(
   mix_results_wide_w_extras,
   file = stringr::str_c(project_name, "_summary.tsv")

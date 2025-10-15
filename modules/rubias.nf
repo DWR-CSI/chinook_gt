@@ -9,6 +9,7 @@ process RUN_RUBIAS {
     path baseline
     val panel
     path unknowns_geno
+    path sex_id_results
 
     output:
     path "*_matchy_pairs.tsv", emit: mpairs
@@ -18,6 +19,6 @@ process RUN_RUBIAS {
     script:
     """
     export LOCI_REMOVAL_REGEX='${params.loci_to_remove}'
-    rubias.R $baseline ${params.project} ${params.rubias_show_missing_data} ${ots28_report} ${panel} $unknowns_geno ${params.ots28_missing_threshold} ${params.gsi_missing_threshold} ${params.pofz_threshold}
+    rubias.R $baseline ${params.project} ${params.rubias_show_missing_data} ${ots28_report} ${panel} $unknowns_geno ${params.ots28_missing_threshold} ${params.gsi_missing_threshold} ${params.pofz_threshold} ${sex_id_results}
     """
 }

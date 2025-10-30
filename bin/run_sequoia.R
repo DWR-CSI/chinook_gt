@@ -117,6 +117,7 @@ create_allele_dictionary <- function(combined_data) {
         all_alleles <- c(col1_data, col2_data)
         valid_alleles <- all_alleles[!is.na(all_alleles) &
             all_alleles != "*" &
+            all_alleles != "NA" &
             all_alleles != "ND" &
             all_alleles != ""]
 
@@ -181,8 +182,8 @@ convert_to_major_allele_counts <- function(genotype_data, allele_dictionary) {
         major_counts <- map2_dbl(col1_data, col2_data, ~ {
             # Check for missing data
             if (is.na(.x) || is.na(.y) ||
-                .x %in% c("*", "ND", "") ||
-                .y %in% c("*", "ND", "")) {
+                .x %in% c("*", "NA", "ND", "") ||
+                .y %in% c("*", "NA", "ND", "")) {
                 return(-9)
             }
 

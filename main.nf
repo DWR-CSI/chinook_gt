@@ -42,7 +42,7 @@ params.female_sexid_threshold = params.female_sexid_threshold ?: 0.002
 params.sexid_min_reads = params.sexid_min_reads ?: 10000
 params.offspring_max_age = params.offspring_max_age ?: 6
 params.offspring_maxBY = params.offspring_maxBY ?: params.offspring_birthyear
-params.offspring_minBY = params.offspring_minBY ?: ((params.offspring_maxBY instanceof Number) ? (params.offspring_maxBY - params.offspring_max_age) : null)
+params.offspring_minBY = params.offspring_minBY ?: ((params.offspring_maxBY) ? (params.offspring_maxBY - params.offspring_max_age) : null)
 
 // Validate numeric threshold ranges
 if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
@@ -80,10 +80,10 @@ if (params.use_sequoia) { // only validated if Sequoia is used
     if (params.species_max_repro_age < params.species_min_repro_age) {
         error "ERROR: species_max_repro_age (${params.species_max_repro_age}) must be >= species_min_repro_age (${params.species_min_repro_age})"
     }
-    if (!(params.offspring_maxBY instanceof Number)) {
-        error "ERROR: offspring_maxBY is required when use_sequoia is true (got ${params.offspring_maxBY})"
+    if (!params.offspring_maxBY) {
+        error "ERROR: offspring_maxBY is required when use_sequoia is true"
     }
-    if ((params.offspring_maxBY instanceof Number) && (params.offspring_minBY instanceof Number) && (params.offspring_maxBY < params.offspring_minBY)) {
+    if (params.offspring_maxBY && params.offspring_minBY && (params.offspring_maxBY < params.offspring_minBY)) {
         error "ERROR: offspring_maxBY (${params.offspring_maxBY}) must be >= offspring_minBY (${params.offspring_minBY})"
     }
 }

@@ -50,7 +50,7 @@ check_file_exists <- function(file_path, description) {
 #' @param param_name Parameter name for error messages
 #' @param allow_na Whether NA values are allowed
 safe_as_integer <- function(value, param_name, allow_na = TRUE) {
-    if (is.na(value) || value == "unknown" || value == "") {
+    if (is.na(value) || str_to_lower(value) == "unknown" || value == "") {
         if (allow_na) {
             return(NA_integer_)
         } else {

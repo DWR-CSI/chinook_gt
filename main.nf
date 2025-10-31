@@ -41,6 +41,7 @@ params.male_sexid_threshold = params.male_sexid_threshold ?: 0.02
 params.female_sexid_threshold = params.female_sexid_threshold ?: 0.002
 params.sexid_min_reads = params.sexid_min_reads ?: 10000
 params.offspring_max_age = params.offspring_max_age ?: 6
+params.offspring_birthyear = params.offspring_birthyear ?: 'unknown'
 params.offspring_maxBY = params.offspring_maxBY ?: params.offspring_birthyear
 params.offspring_minBY = params.offspring_minBY ?: ((params.offspring_maxBY) ? (params.offspring_maxBY - params.offspring_max_age) : null)
 

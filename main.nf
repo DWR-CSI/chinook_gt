@@ -83,9 +83,6 @@ if (params.use_sequoia) { // only validated if Sequoia is used
     if (!params.offspring_maxBY) {
         error "ERROR: offspring_maxBY is required when use_sequoia is true"
     }
-    if (params.offspring_maxBY && params.offspring_minBY && (params.offspring_maxBY < params.offspring_minBY)) {
-        error "ERROR: offspring_maxBY (${params.offspring_maxBY}) must be >= offspring_minBY (${params.offspring_minBY})"
-    }
 }
 
 // Import modules

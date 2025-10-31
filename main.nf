@@ -54,9 +54,6 @@ if (params.gsi_missing_threshold < 0 || params.gsi_missing_threshold > 1) {
 if (params.pofz_threshold < 0 || params.pofz_threshold > 1) {
     error "ERROR: pofz_threshold must be between 0 and 1 (got ${params.pofz_threshold})"
 }
-if (params.sequoia_missing_threshold < 0 || params.sequoia_missing_threshold > 1) {
-    error "ERROR: sequoia_missing_threshold must be between 0 and 1 (got ${params.sequoia_missing_threshold})"
-}
 if (params.allele_balance < 0 || params.allele_balance > 1) {
     error "ERROR: allele_balance must be between 0 and 1 (got ${params.allele_balance})"
 }
@@ -75,11 +72,17 @@ if (params.total_depth < 0) {
 if (params.sexid_min_reads < 0) {
     error "ERROR: sexid_min_reads must be non-negative (got ${params.sexid_min_reads})"
 }
-if (params.species_max_repro_age < params.species_min_repro_age) {
-    error "ERROR: species_max_repro_age (${params.species_max_repro_age}) must be >= species_min_repro_age (${params.species_min_repro_age})"
-}
-if (params.offspring_maxBY < params.offspring_minBY) {
-    error "ERROR: offspring_maxBY (${params.offspring_maxBY}) must be >= offspring_minBY (${params.offspring_minBY})"
+
+if (params.use_sequoia) { // only validated if Sequoia is used
+    if (params.sequoia_missing_threshold < 0 || params.sequoia_missing_threshold > 1) {
+        error "ERROR: sequoia_missing_threshold must be between 0 and 1 (got ${params.sequoia_missing_threshold})"
+    }
+    if (params.species_max_repro_age < params.species_min_repro_age) {
+        error "ERROR: species_max_repro_age (${params.species_max_repro_age}) must be >= species_min_repro_age (${params.species_min_repro_age})"
+    }
+    if (params.offspring_maxBY < params.offspring_minBY) {
+        error "ERROR: offspring_maxBY (${params.offspring_maxBY}) must be >= offspring_minBY (${params.offspring_minBY})"
+    }
 }
 
 // Import modules

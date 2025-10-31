@@ -80,7 +80,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
     if (params.species_max_repro_age < params.species_min_repro_age) {
         error "ERROR: species_max_repro_age (${params.species_max_repro_age}) must be >= species_min_repro_age (${params.species_min_repro_age})"
     }
-    if (params.offspring_maxBY < params.offspring_minBY) {
+    if ((params.offspring_maxBY instanceof Number) && (params.offspring_minBY instanceof Number) && (params.offspring_maxBY < params.offspring_minBY)) {
         error "ERROR: offspring_maxBY (${params.offspring_maxBY}) must be >= offspring_minBY (${params.offspring_minBY})"
     }
 }

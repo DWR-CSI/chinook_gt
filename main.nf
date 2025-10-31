@@ -31,7 +31,7 @@ params.concat_all_reads = params.concat_all_reads ?: false
 params.use_sequoia = params.use_sequoia ?: false
 params.sequoia_mode = params.sequoia_mode ?: 'par'
 params.sequoia_missing_threshold = params.sequoia_missing_threshold ?: 0.5
-params.species_max_repro_age = params.species_max_repro_age ?: 8
+params.species_max_repro_age = params.species_max_repro_age ?: 7
 params.species_min_repro_age = params.species_min_repro_age ?: 1
 params.haplotype_depth = params.haplotype_depth ?: 4
 params.total_depth = params.total_depth ?: 8
@@ -40,6 +40,47 @@ params.loci_to_remove = params.loci_to_remove ?: ""
 params.male_sexid_threshold = params.male_sexid_threshold ?: 0.02
 params.female_sexid_threshold = params.female_sexid_threshold ?: 0.002
 params.sexid_min_reads = params.sexid_min_reads ?: 10000
+params.offspring_max_age = params.offspring_max_age ?: 6
+params.offspring_maxBY = params.offspring_maxBY ?: java.time.Year.now().getValue()
+params.offspring_minBY = params.offspring_minBY ?: (params.offspring_maxBY - params.offspring_max_age)
+
+// Validate numeric threshold ranges
+if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
+    error "ERROR: ots28_missing_threshold must be between 0 and 1 (got ${params.ots28_missing_threshold})"
+}
+if (params.gsi_missing_threshold < 0 || params.gsi_missing_threshold > 1) {
+    error "ERROR: gsi_missing_threshold must be between 0 and 1 (got ${params.gsi_missing_threshold})"
+}
+if (params.pofz_threshold < 0 || params.pofz_threshold > 1) {
+    error "ERROR: pofz_threshold must be between 0 and 1 (got ${params.pofz_threshold})"
+}
+if (params.sequoia_missing_threshold < 0 || params.sequoia_missing_threshold > 1) {
+    error "ERROR: sequoia_missing_threshold must be between 0 and 1 (got ${params.sequoia_missing_threshold})"
+}
+if (params.allele_balance < 0 || params.allele_balance > 1) {
+    error "ERROR: allele_balance must be between 0 and 1 (got ${params.allele_balance})"
+}
+if (params.male_sexid_threshold < 0 || params.male_sexid_threshold > 1) {
+    error "ERROR: male_sexid_threshold must be between 0 and 1 (got ${params.male_sexid_threshold})"
+}
+if (params.female_sexid_threshold < 0 || params.female_sexid_threshold > 1) {
+    error "ERROR: female_sexid_threshold must be between 0 and 1 (got ${params.female_sexid_threshold})"
+}
+if (params.haplotype_depth < 0) {
+    error "ERROR: haplotype_depth must be non-negative (got ${params.haplotype_depth})"
+}
+if (params.total_depth < 0) {
+    error "ERROR: total_depth must be non-negative (got ${params.total_depth})"
+}
+if (params.sexid_min_reads < 0) {
+    error "ERROR: sexid_min_reads must be non-negative (got ${params.sexid_min_reads})"
+}
+if (params.species_max_repro_age < params.species_min_repro_age) {
+    error "ERROR: species_max_repro_age (${params.species_max_repro_age}) must be >= species_min_repro_age (${params.species_min_repro_age})"
+}
+if (params.offspring_maxBY < params.offspring_minBY) {
+    error "ERROR: offspring_maxBY (${params.offspring_maxBY}) must be >= offspring_minBY (${params.offspring_minBY})"
+}
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -144,6 +185,9 @@ workflow {
     Sequoia Missing Threshold: ${params.sequoia_missing_threshold}
     Species Max Repro Age   : ${params.species_max_repro_age}
     Species Min Repro Age   : ${params.species_min_repro_age}
+    Offspring Birth Year    : ${params.offspring_birthyear ?: 'Not specified'}
+    Offspring Min Birth Year: ${params.offspring_minBY ?: 'Not specified'}
+    Offspring Max Birth Year: ${params.offspring_maxBY ?: 'Not specified'}
     Loci Removal Regex    : ${params.loci_to_remove ?: 'None specified'}
 
     ==============================================

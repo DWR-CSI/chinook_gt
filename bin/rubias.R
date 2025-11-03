@@ -437,17 +437,17 @@ mix_results_wide <- all_full_mix_results %>%
     ~ round(., digits = 2)
   )) %>% # Round to 2 decimal places
   mutate(
-    #GSI_perc_missing = round(fraction_missing * 100, digits = 1),
-    #ots28_missing = round(ots28_missing, digits = 1),
+    GSI_missing = round(fraction_missing * 100, digits = 1),
+    Chr28_missing = round(ots28_missing, digits = 1),
     probability = if_else((final_call != "Missing Data"), round(probability, digits = 3), NA_real_)
   ) %>%
   mutate(across(c(RoSA, final_call), toupper)) %>%
   select(
     SampleID = indiv,
+    Chr28_missing,
+    GSI_missing,
     Gtseq_Chr28_Geno = RoSA,
-    #RoSA_perc_missing = ots28_missing,
     Pop_Structure_ID = final_call,
-    #GSI_perc_missing,
     CV_Fall = fall,
     CV_Late_Fall = latefall,
     CV_Spring = spring,

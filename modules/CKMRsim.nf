@@ -7,17 +7,17 @@ process CKMR_GENO_LONG {
     input:
     path(geno_wide)
     path(parents_geno_wide)
-    path(allele_frequencies)
-    val(logl_threshold)
+    path(extra_genos_allele_freqs)
 
     output:
     path "*_PO_results.tsv", emit: PO_results
-    path "*_parent_genotypes_long.tsv", emit: parent_genotypes_long
-    path "*_offspring_genotypes_long.tsv", emit: offspring_genotypes_long
+    path "*_PO_ckmr.rds", emit: PO_ckmr
+    path "*_offspring_genotypes_long.rds", emit: offspring_genotypes_long
+    path "*_parent_genotypes_long.rds", emit: parent_genotypes_long
 
     script:
     """
     export LOCI_REMOVAL_REGEX='${params.loci_to_remove}'
-    run_CKMR.R ${geno_wide} ${parents_geno_wide} ${logl_threshold} ${params.project} ${params.CKMR_min_loci} ${allele_frequencies}
+    run_CKMR.R ${geno_wide} ${parents_geno_wide} ${params.CKMR_logl_threshold} ${params.project} ${params.CKMR_min_loci} ${extra_genos_allele_freqs}
     """
 }

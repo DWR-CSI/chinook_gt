@@ -189,6 +189,7 @@ PO_ckmr <- create_ckmr(
   ge_mod_assumed_pars_list = list(miscall_rate = 0.005, dropout_rate = 0.005),
   ge_mod_true_pars_list = list(miscall_rate = 0.005, dropout_rate = 0.005)
 )
+saveRDS(PO_ckmr, file = paste0(project_name, "_PO_ckmr.rds"))
 
 cat("Number of markers in allele frequencies file:", n_distinct(allele_freqs$Locus), "\n")
 cat("Number of total alleles:", nrow(allele_freqs), "\n")
@@ -226,10 +227,10 @@ parent_genos_long <- combined_genotypes_long %>%
   filter(Indiv %in% parent_ids)
 offspring_genos_long <- combined_genotypes_long %>%
   filter(Indiv %in% offspring_ids)
-write_tsv(parent_genos_long,
-          file = paste0(project_name, "_parent_genotypes_long.tsv"))
-write_tsv(offspring_genos_long,
-          file = paste0(project_name, "_offspring_genotypes_long.tsv"))
+saveRDS(parent_genos_long,
+        file = paste0(project_name, "_parent_genotypes_long.rds"))
+saveRDS(offspring_genos_long,
+        file = paste0(project_name, "_offspring_genotypes_long.rds"))
 cat("Number of offspring genotypes:", length(unique(offspring_genos_long$Indiv)), "\n")
 cat("Number of parent genotypes:", length(unique(parent_genos_long$Indiv)), "\n")
 

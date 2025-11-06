@@ -20,8 +20,19 @@ if (str_to_lower(logl_threshold) != "auto") {
 project_name <- args[4]
 # allele_freqs input file should be formatted with columns: Chrom, Locus, Pos, Allele, LocIdx, AlleIdx, Freq
 min_loci_threshold <- args[5] %>% as.integer() # Need to add default param setting to main.nf, nextflow schema, and example params.
-extra_genos_long <- args[6] %>% # extra long-format genotype data for calculating allele frequencies
-    readRDS()
+extra_genos_file <- args[6] # extra long-format genotype data for calculating allele frequencies
+
+# Check if extra genotypes file exists
+if (file.exists(extra_genos_file)) {
+  cat("Loading extra genotypes file:", extra_genos_file, "\n")
+  extra_genos_long <- readRDS(extra_genos_file)
+  use_extra_genos <- TRUE
+} else {
+  cat("Extra genotypes file not found:", extra_genos_file, "\n")
+  cat("Proceeding without extra genotypes for allele frequency calculation.\n")
+  extra_genos_long <- NULL
+  use_extra_genos <- FALSE
+}
 
 # Get loci removal regex from environment variable
 loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
@@ -136,7 +147,11 @@ combined_genotypes_long <- reshape_paired_genotypes(combined_genotypes_raw)
 # Load and calculate allele frequencies
 cat("Loading allele frequencies...\n")
 
-total_genos_long <- bind_rows(combined_genotypes_long, extra_genos_long)
+if (use_extra_genos) {
+  total_genos_long <- bind_rows(combined_genotypes_long, extra_genos_long)
+} else {
+  total_genos_long <- combined_genotypes_long
+}
 allele_freqs <- total_genos_long %>%
   # Remove missing data (if coded as NA, "", or specific missing code)
   filter(!is.na(Allele), Allele != "", Allele != "0") %>%

@@ -19,17 +19,9 @@ if (str_to_lower(logl_threshold) != "auto") {
 }
 project_name <- args[4]
 # allele_freqs input file should be formatted with columns: Chrom, Locus, Pos, Allele, LocIdx, AlleIdx, Freq
-allele_freqs <- args[5] %>% # Needs additional post-processing including loading the file
-    read_tsv(col_types = cols(
-      Chrom = col_integer(),
-      Locus = col_character(),
-      Pos = col_integer(),
-      Allele = col_character(),
-      LocIdx = col_integer(),
-      AlleIdx = col_integer(),
-      Freq = col_double()
-    ))
-min_loci_threshold <- args[6] %>% as.integer() # Need to add default param setting to main.nf, nextflow schema, and example params.
+min_loci_threshold <- args[5] %>% as.integer() # Need to add default param setting to main.nf, nextflow schema, and example params.
+extra_genos_long <- args[6] %>% # extra long-format genotype data for calculating allele frequencies
+    readRDS()
 
 # Get loci removal regex from environment variable
 loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
@@ -40,9 +32,6 @@ if (loci_removal_regex == "") {
 }
 
 # Functions
-# Print matching columns to be removed
-
-
 index_markers <- function(M) {
   tmp <- M %>%
     dplyr::distinct(Chrom, Locus) %>%
@@ -110,21 +99,7 @@ reshape_paired_genotypes <- function(geno_df) {
   bind_rows(long_list)
 }
 
-# Load allele frequencies
-cat("Loading allele frequencies...\n")
-cat("Number of markers in allele frequencies file:", n_distinct(allele_freqs$Locus), "\n")
-cat("Number of total alleles:", nrow(allele_freqs), "\n")
-cat("Min and max of alleles per locus (range): ", paste(range(table(allele_freqs$Locus)), collapse = " - "), "\n")
 
-PO_ckmr <- create_ckmr(
-    D = allele_freqs,
-    kappa_matrix = kappas[c("PO", "U"), ],
-    ge_mod_assumed = ge_model_TGIE,
-    ge_mod_true = ge_model_TGIE,
-    ge_mod_assumed_pars_list = list(epsilon = 0.005),  # Low error rate for modern genotyping
-    ge_mod_true_pars_list = list(epsilon = 0.005)
-)
-print(PO_ckmr)
 
 # Process genotypes
 combined_genotypes_raw <- bind_rows(
@@ -158,6 +133,83 @@ offspring_ids <- unknown_genotypes_raw$SAMPLE_ID
 parent_ids <- parents_genotypes_raw$SAMPLE_ID
 
 combined_genotypes_long <- reshape_paired_genotypes(combined_genotypes_raw)
+# Load and calculate allele frequencies
+cat("Loading allele frequencies...\n")
+
+total_genos_long <- bind_rows(combined_genotypes_long, extra_genos_long)
+allele_freqs <- total_genos_long %>%
+  # Remove missing data (if coded as NA, "", or specific missing code)
+  filter(!is.na(Allele), Allele != "", Allele != "0") %>%
+  # Count alleles by locus
+  group_by(Locus, Allele) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  # Calculate frequencies within each locus
+  group_by(Locus) %>%
+  mutate(
+    total = sum(count),
+    Freq = count / total
+  ) %>%
+  ungroup() %>%
+  select(Locus, Allele, Freq)
+
+# Check allele frequencies
+allele_freqs %>%
+  group_by(Locus) %>%
+  summarise(
+    n_alleles = n(),
+    freq_sum = sum(Freq)
+  ) %>%
+  print(n = 20)
+
+# Identify and remove monomorphic loci (only 1 allele)
+monomorphic_loci <- allele_freqs %>%
+  group_by(Locus) %>%
+  summarise(n_alleles = n()) %>%
+  filter(n_alleles == 1) %>%
+  pull(Locus)
+
+cat("Removing", length(monomorphic_loci), "monomorphic loci\n")
+
+# Filter out monomorphic loci
+allele_freqs <- allele_freqs %>%
+  filter(!Locus %in% monomorphic_loci)
+
+# Create the long_markers format required by CKMRsim
+# This format needs: Chrom, Locus, Pos, Allele, Freq
+
+# For microhaplotypes without known physical positions,
+# assign arbitrary chromosome and position values
+long_markers_data <- allele_freqs %>%
+  mutate(
+    Chrom = 1,  # Arbitrary chromosome (use 1 for unlinked analysis)
+    Pos = as.numeric(factor(Locus)),  # Arbitrary position based on locus order
+  ) %>%
+  select(Chrom, Locus, Pos, Allele, Freq)
+
+# Reindex markers (required preprocessing step)
+long_markers_data <- index_markers(long_markers_data)
+
+# Check the result
+head(long_markers_data, 20)
+
+# Summary statistics
+cat("Number of loci:", n_distinct(long_markers_data$Locus), "\n")
+cat("Number of total alleles:", nrow(long_markers_data), "\n")
+cat("Alleles per locus (range):",
+    range(table(long_markers_data$Locus)), "\n")
+
+PO_ckmr <- create_ckmr(
+  D = long_markers_data,
+  ge_mod_assumed = ge_model_microhap1,
+  ge_mod_true = ge_model_microhap1,
+  ge_mod_assumed_pars_list = list(miscall_rate = 0.005, dropout_rate = 0.005),
+  ge_mod_true_pars_list = list(miscall_rate = 0.005, dropout_rate = 0.005)
+)
+
+cat("Number of markers in allele frequencies file:", n_distinct(allele_freqs$Locus), "\n")
+cat("Number of total alleles:", nrow(allele_freqs), "\n")
+cat("Min and max of alleles per locus (range): ", paste(range(table(allele_freqs$Locus)), collapse = " - "), "\n")
+
 
 # Remove geno loci that are not in allele frequency marker file
 geno_loci <- unique(combined_genotypes_long$Locus)
@@ -177,9 +229,10 @@ duplicates <- combined_genotypes_long %>%
   filter(n > 1)
 
 if(nrow(duplicates) > 0) {
-  cat("Found", nrow(duplicates), "duplicate entries. Displaying first 20:\n")
+  cat("WARNING: Found", nrow(duplicates), "duplicate entries. Displaying first 20:\n")
   print(head(duplicates, 20))
-  cat("Removing duplicates by keeping first occurrence...\n")
+  cat("WARNING: Removing duplicates by keeping first occurrence. This may indicate data quality issues.\n")
+  cat("WARNING: Consider investigating the source of duplicate genotype calls.\n")
   combined_genotypes_long <- combined_genotypes_long %>%
     distinct(Indiv, Locus, gene_copy, .keep_all = TRUE)
 }
@@ -219,5 +272,4 @@ if (logl_threshold != "auto" && !is.na(as.numeric(logl_threshold))) {
     arrange(desc(logl_ratio))
 }
 
-write_tsv(po_results_filtered,
-          file = paste0(project_name, "_PO_results.tsv"))
+write_tsv(po_results_filtered, file = paste0(project_name, "_PO_results.tsv"))

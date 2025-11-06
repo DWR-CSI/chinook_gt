@@ -18,6 +18,6 @@ process CKMR_GENO_LONG {
     script:
     """
     export LOCI_REMOVAL_REGEX='${params.loci_to_remove}'
-    run_CKMR.R ${geno_wide} ${parents_geno_wide} ${logl_threshold} ${params.project} ${allele_frequencies} ${params.CKMR_min_loci}
+    run_CKMR.R ${geno_wide} ${parents_geno_wide} ${logl_threshold} ${params.project} ${params.CKMR_min_loci} ${allele_frequencies}
     """
 }

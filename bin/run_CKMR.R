@@ -18,7 +18,6 @@ if (str_to_lower(logl_threshold) != "auto") {
   stop("Automatic log-likelihood thresholding not yet supported in this script.")
 }
 project_name <- args[4]
-# allele_freqs input file should be formatted with columns: Chrom, Locus, Pos, Allele, LocIdx, AlleIdx, Freq
 min_loci_threshold <- args[5] %>% as.integer() # Need to add default param setting to main.nf, nextflow schema, and example params.
 extra_genos_file <- args[6] # extra long-format genotype data for calculating allele frequencies
 

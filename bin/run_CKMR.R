@@ -67,50 +67,20 @@ index_markers <- function(M) {
 }
 
 reshape_paired_genotypes <- function(geno_df) {
-
-  # Extract sample IDs
-  sample_ids <- geno_df$SAMPLE_ID
-
-  # Get column names (excluding SAMPLE_ID)
-  geno_cols <- colnames(geno_df)[-1]
-
-  # Extract locus names (remove .1 or .2 suffix)
-  locus_names <- unique(gsub("\\.[12]$", "", geno_cols))
-
-  # Create long format data frame
-  long_list <- list()
-
-  for (i in seq_along(sample_ids)) {
-    indiv_id <- sample_ids[i]
-
-    for (locus in locus_names) {
-      allele1_col <- paste0(locus, ".1")
-      allele2_col <- paste0(locus, ".2")
-
-      allele1 <- as.character(geno_df[[allele1_col]][i])
-      allele2 <- as.character(geno_df[[allele2_col]][i])
-
-      # Store genotype
-      long_list[[length(long_list) + 1]] <- tibble(
-        Indiv = indiv_id,
-        Locus = locus,
-        gene_copy = 1,
-        Allele = allele1
-      )
-
-      long_list[[length(long_list) + 1]] <- tibble(
-        Indiv = indiv_id,
-        Locus = locus,
-        gene_copy = 2,
-        Allele = allele2
-      )
-    }
-  }
-
-  bind_rows(long_list)
+  geno_df %>%
+    pivot_longer(
+      cols = -SAMPLE_ID,
+      names_to = c("Locus", "gene_copy"),
+      names_pattern = "(.+)\\.(1|2)$",
+      values_to = "Allele"
+    ) %>%
+    mutate(
+      gene_copy = as.integer(gene_copy),
+      Allele = as.character(Allele)
+    ) %>%
+    rename(Indiv = SAMPLE_ID) %>%
+    select(Indiv, Locus, gene_copy, Allele)
 }
-
-
 
 # Process genotypes
 combined_genotypes_raw <- bind_rows(

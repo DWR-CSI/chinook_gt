@@ -108,6 +108,7 @@ include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
 include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
 include { CONCAT_READS } from './modules/concat_reads.nf'
 include { RUN_SEQUOIA } from './modules/sequoia.nf'
+include { CKMR_PO } from './modules/CKMRsim.nf'
 
 // Functions
 

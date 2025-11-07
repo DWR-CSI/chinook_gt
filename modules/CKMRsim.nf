@@ -1,5 +1,5 @@
-process CKMR_GENO_LONG {
-    tag "CKMR Genotype Long Format Conversion"
+process CKMR_PO {
+    tag "CKMR Parent-Offspring Analysis"
     container "docker.io/bnguyen29/ckmrsim:latest"
     label 'process_medium'
     publishDir "${params.outdir}/${params.project}/CKMRsim", mode: 'copy'

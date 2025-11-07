@@ -19,10 +19,14 @@ n_loci: 204
 rubias_show_missing_data: "TRUE"
 panel: "full"
 concat_all_reads: false
-use_sequoia: TRUE
+use_CKMR: TRUE
+CKMR_logl_threshold: 6.9
+CKMR_min_loci: 90
+CKMR_parent_geno_input: "examples/PBT/FRH2024_reference_genotypes.csv"
+use_sequoia: FALSE
 sequoia_mode: "par"
 sequoia_missing_threshold: 0.5
-parent_geno_input: "examples/PBT/FRH2024_reference_genotypes.txt"
+parent_geno_input: "examples/PBT/FRH2024_reference_genotypes.csv"
 parent_lifehistory: "examples/PBT/FRH2024_reference_lifehistory.txt"
 offspring_birthyear: "unknown"
 offspring_minBY: "unknown"

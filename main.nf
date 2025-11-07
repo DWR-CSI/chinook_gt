@@ -44,6 +44,10 @@ params.offspring_max_age = params.offspring_max_age ?: 6
 params.offspring_birthyear = params.offspring_birthyear ?: 'unknown'
 params.offspring_maxBY = params.offspring_maxBY ?: params.offspring_birthyear
 params.offspring_minBY = params.offspring_minBY ?: ((params.offspring_maxBY) ? (params.offspring_maxBY - params.offspring_max_age) : null)
+params.use_CKMR = params.use_CKMR ?: false
+params.CKMR_logl_threshold = params.CKMR_logl_threshold ?: 6.9
+params.CKMR_min_loci = params.CKMR_min_loci ?: 90
+params.CKMR_parent_geno_input = params.CKMR_parent_geno_input ?: "$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"
 
 // Validate numeric threshold ranges
 if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
@@ -450,7 +454,12 @@ workflow {
 
     // Run Rubias analyses
     RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps, ANALYZE_IDXSTATS.out.sexid)
-
+    // Run CKMR analysis
+    if (params.use_CKMR) {
+        par_geno_wide = Channel.fromPath(params.CKMR_parent_geno_input, checkIfExists: true)
+        extra_genos_allele_freqs = Channel.fromPath(params.extra_genos_allele_freqs)
+        CKMR_PO(GEN_HAPS.out.haps, par_geno_wide, extra_genos_allele_freqs)
+    }
     // Run PBT analysis
     if (params.use_sequoia) {
         par_geno_file = Channel.fromPath(params.parent_geno_input, checkIfExists: true)

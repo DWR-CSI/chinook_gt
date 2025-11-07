@@ -2,6 +2,46 @@
 library(tidyverse)
 library(CKMRsim)
 
+# Functions
+index_markers <- function(M) {
+  tmp <- M %>%
+    dplyr::distinct(Chrom, Locus) %>%
+    dplyr::count(Locus) %>%
+    dplyr::filter(n > 1)
+  if (nrow(tmp) > 0) {
+    dupies <- tmp$Locus
+    stop("Locus names must be globally unique.  These are not: ", paste(dupies, collapse = ", "))
+  }
+  M %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(Chrom, Pos, desc(Freq)) %>%
+    dplyr::mutate(locidx = as.integer(factor(Locus, levels = unique(Locus)))) %>%
+    dplyr::group_by(Chrom, Locus) %>%
+    dplyr::mutate(
+      alleidx = as.integer(factor(Allele, levels = unique(Allele))),
+      newfreq = Freq/sum(Freq)
+      ) %>%
+    dplyr::select(-Freq) %>%
+    rename(Freq = newfreq, AlleIdx = alleidx, LocIdx = locidx) %>%
+    dplyr::ungroup()
+}
+
+reshape_paired_genotypes <- function(geno_df) {
+  geno_df %>%
+    pivot_longer(
+      cols = -SAMPLE_ID,
+      names_to = c("Locus", "gene_copy"),
+      names_pattern = "(.+)\\.(1|2)$",
+      values_to = "Allele"
+    ) %>%
+    mutate(
+      gene_copy = as.integer(gene_copy),
+      Allele = as.character(Allele)
+    ) %>%
+    rename(Indiv = SAMPLE_ID) %>%
+    select(Indiv, Locus, gene_copy, Allele)
+}
+
 # Load arguments
 args <- commandArgs(trailingOnly = TRUE)
 unknown_genotypes_raw <- args[1] %>%
@@ -49,46 +89,6 @@ loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
 if (loci_removal_regex == "") {
     loci_removal_regex <- "^$"
     cat("No loci removal regex specified - no loci will be removed\n")
-}
-
-# Functions
-index_markers <- function(M) {
-  tmp <- M %>%
-    dplyr::distinct(Chrom, Locus) %>%
-    dplyr::count(Locus) %>%
-    dplyr::filter(n > 1)
-  if (nrow(tmp) > 0) {
-    dupies <- tmp$Locus
-    stop("Locus names must be globally unique.  These are not: ", paste(dupies, collapse = ", "))
-  }
-  M %>%
-    dplyr::ungroup() %>%
-    dplyr::arrange(Chrom, Pos, desc(Freq)) %>%
-    dplyr::mutate(locidx = as.integer(factor(Locus, levels = unique(Locus)))) %>%
-    dplyr::group_by(Chrom, Locus) %>%
-    dplyr::mutate(
-      alleidx = as.integer(factor(Allele, levels = unique(Allele))),
-      newfreq = Freq/sum(Freq)
-      ) %>%
-    dplyr::select(-Freq) %>%
-    rename(Freq = newfreq, AlleIdx = alleidx, LocIdx = locidx) %>%
-    dplyr::ungroup()
-}
-
-reshape_paired_genotypes <- function(geno_df) {
-  geno_df %>%
-    pivot_longer(
-      cols = -SAMPLE_ID,
-      names_to = c("Locus", "gene_copy"),
-      names_pattern = "(.+)\\.(1|2)$",
-      values_to = "Allele"
-    ) %>%
-    mutate(
-      gene_copy = as.integer(gene_copy),
-      Allele = as.character(Allele)
-    ) %>%
-    rename(Indiv = SAMPLE_ID) %>%
-    select(Indiv, Locus, gene_copy, Allele)
 }
 
 # Process genotypes

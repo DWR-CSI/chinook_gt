@@ -15,6 +15,8 @@ reports:
     display: "Problematic Loci Summary"
   idxstats_analysis/sample_statistics.csv:
     display: "Sample Sequencing Statistics"
+  CKMRsim/*_PO_results.tsv:
+    display: "CKMR Parent-Offspring Results"
   sequoia/*_parentage_results.txt:
     display: "PBT Results"
 

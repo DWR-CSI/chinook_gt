@@ -180,6 +180,12 @@
                     "description": "Minimum number of loci required for valid parent-offspring assignment.",
                     "default": 90,
                     "minimum": 1
+                },
+                "CKMR_extra_genos_allele_freqs": {
+                    "type": "string",
+                    "description": "Path to extra genotypes file (wide format CSV) for additional individuals to include in allele frequency calculations.",
+                    "default": "az://seqera1/reference/full_panel/PBT/JPE2022-2024_geno_wide.csv",
+                    "format": "path"
                 }
             }
         },

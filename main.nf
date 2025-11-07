@@ -48,6 +48,7 @@ params.use_CKMR = params.use_CKMR ?: false
 params.CKMR_logl_threshold = params.CKMR_logl_threshold ?: 6.9
 params.CKMR_min_loci = params.CKMR_min_loci ?: 90
 params.CKMR_parent_geno_input = params.CKMR_parent_geno_input ?: "$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"
+params.extra_genos_allele_freqs = params.extra_genos_allele_freqs ?: "$projectDir/examples/PBT/JPE2022-2024_geno_wide.csv"
 
 // Validate numeric threshold ranges
 if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {

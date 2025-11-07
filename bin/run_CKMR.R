@@ -24,7 +24,17 @@ extra_genos_file <- args[6] # extra long-format genotype data for calculating al
 # Check if extra genotypes file exists
 if (file.exists(extra_genos_file)) {
   cat("Loading extra genotypes file:", extra_genos_file, "\n")
-  extra_genos_long <- readRDS(extra_genos_file)
+  extra_genos_wide <- read_csv(extra_genos_file, col_types = cols(.default = col_character()))
+  # remove column named "group" if it exists
+  if ("group" %in% colnames(extra_genos_wide)) {
+    extra_genos_wide <- extra_genos_wide %>% select(-group)
+  }
+  #if SAMPLE_ID column is not present, rename first column to SAMPLE_ID
+  if (!"SAMPLE_ID" %in% colnames(extra_genos_wide)) {
+    cat("SAMPLE_ID column not found. Renaming first column to SAMPLE_ID\n")
+    colnames(extra_genos_wide)[1] <- "SAMPLE_ID"
+  }
+  extra_genos_long <- reshape_paired_genotypes(extra_genos_wide)
   use_extra_genos <- TRUE
 } else {
   cat("Extra genotypes file not found:", extra_genos_file, "\n")
@@ -112,7 +122,12 @@ if (length(cols_to_remove) > 0) {
 offspring_ids <- unknown_genotypes_raw$SAMPLE_ID
 parent_ids <- parents_genotypes_raw$SAMPLE_ID
 
-combined_genotypes_long <- reshape_paired_genotypes(combined_genotypes_raw)
+unknown_genotypes_long <- reshape_paired_genotypes(unknown_genotypes_raw)
+parents_genotypes_long <- reshape_paired_genotypes(parents_genotypes_raw)
+combined_genotypes_long <- bind_rows(
+  unknown_genotypes_long,
+  parents_genotypes_long
+)
 # Load and calculate allele frequencies
 cat("Loading allele frequencies...\n")
 
@@ -235,11 +250,11 @@ cat("Number of offspring genotypes:", length(unique(offspring_genos_long$Indiv))
 cat("Number of parent genotypes:", length(unique(parent_genos_long$Indiv)), "\n")
 
 po_results <- pairwise_kin_logl_ratios(
-    D1 = parent_genos_long,
-    D2 = offspring_genos_long,
-    CK = PO_ckmr,
-    numer = "PO",
-    denom = "U"
+  D1 = parent_genos_long,
+  D2 = offspring_genos_long,
+  CK = PO_ckmr,
+  numer = "PO",
+  denom = "U"
 )
 
 if (logl_threshold != "auto" && !is.na(as.numeric(logl_threshold))) {

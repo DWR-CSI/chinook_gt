@@ -249,7 +249,7 @@ check_file_exists(offspring_genotypes_path, "offspring genotypes")
 
 # Read data files
 reference_parental_genotypes <- ref_genotypes_path %>%
-    read_tsv(col_types = cols(
+    read_csv(col_types = cols(
         .default = col_character(),
         SAMPLE_ID = col_character()
     ))

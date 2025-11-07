@@ -153,6 +153,42 @@
                 }
             }
     },
+        "ckmr_options": {
+            "title": "CKMRsim Options",
+            "type": "object",
+            "description": "CKMRsim for parent-offspring analysis using close-kin mark-recapture methods.",
+            "properties": {
+                "use_CKMR": {
+                    "type": "boolean",
+                    "description": "Enable CKMRsim for parent-offspring analysis. If false, the pipeline will not run CKMRsim.",
+                    "default": false
+                },
+                "CKMR_parent_geno_input": {
+                    "type": "string",
+                    "description": "Path to parent genotype file (CKMRsim formatted).",
+                    "default": "az://seqera1/reference/full_panel/PBT/FRH2024_reference_genotypes.csv",
+                    "format": "path"
+                },
+                "CKMR_logl_threshold": {
+                    "type": "number",
+                    "description": "Log-likelihood ratio threshold for filtering for parent-offspring relationships. Higher values are more conservative.",
+                    "default": 6.9,
+                    "minimum": 0
+                },
+                "CKMR_min_loci": {
+                    "type": "integer",
+                    "description": "Minimum number of loci required for valid parent-offspring assignment.",
+                    "default": 90,
+                    "minimum": 1
+                },
+                "CKMR_extra_genos_allele_freqs": {
+                    "type": "string",
+                    "description": "Path to extra genotypes file (wide format CSV) for additional individuals to include in allele frequency calculations.",
+                    "default": "az://seqera1/reference/full_panel/PBT/JPE2022-2024_geno_wide.csv",
+                    "format": "path"
+                }
+            }
+        },
         "sequoia_options": {
             "title": "Sequoia Options",
             "type": "object",
@@ -179,7 +215,7 @@
                 "parent_geno_input": {
                     "type": "string",
                     "description": "Path to parent genotype file (Sequoia formatted).",
-                    "default": "az://seqera1/reference/full_panel/PBT/FRH2024_reference_genotypes.txt",
+                    "default": "az://seqera1/reference/full_panel/PBT/FRH2024_reference_genotypes.csv",
                     "format": "path"
                 },
                 "parent_lifehistory": {
@@ -245,6 +281,9 @@
         },
         {
             "$ref": "#/$defs/threshold_options"
+        },
+        {
+            "$ref": "#/$defs/ckmr_options"
         },
         {
             "$ref": "#/$defs/sequoia_options"

@@ -8,11 +8,11 @@ process RUBIAS_SUMMARY {
     path rubias_results
 
     output:
-    path "*_rubias_summary.csv", emit: rubias_summary
+    path "*_rubias_summary.tsv", emit: rubias_summary
 
     script:
     """
-    summarize_results.R rubias ${rubias_results}
+    summarize_results.R rubias ${params.project} ${rubias_results}
     """
 }
 
@@ -27,10 +27,10 @@ process CKMRSIM_RUBIAS_SUMMARY {
     path ckmrsim_results
 
     output:
-    path "*_ckmrsim_rubias_summary.csv", emit: ckmrsim_rubias_summary
+    path "*_ckmrsim_rubias_summary.tsv", emit: ckmrsim_rubias_summary
 
     script:
     """
-    summarize_results.R ckmrsim_rubias ${rubias_results} ${ckmrsim_results}
+    summarize_results.R ckmrsim_rubias ${params.project} ${rubias_results} ${ckmrsim_results}
     """
 }

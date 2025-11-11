@@ -109,6 +109,7 @@ include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
 include { CONCAT_READS } from './modules/concat_reads.nf'
 include { RUN_SEQUOIA } from './modules/sequoia.nf'
 include { CKMR_PO } from './modules/CKMRsim.nf'
+include { CKMRSIM_RUBIAS_SUMMARY } from './modules/summary.nf'
 
 // Functions
 
@@ -461,6 +462,7 @@ workflow {
         par_geno_wide = Channel.fromPath(params.CKMR_parent_geno_input, checkIfExists: true)
         extra_genos_allele_freqs = Channel.fromPath(params.CKMR_extra_genos_allele_freqs)
         CKMR_PO(GEN_HAPS.out.haps, par_geno_wide, extra_genos_allele_freqs)
+        CKMRSIM_RUBIAS_SUMMARY(RUN_RUBIAS.out.summary, CKMR_PO.out.PO_results)
     }
     // Run PBT analysis
     if (params.use_sequoia) {

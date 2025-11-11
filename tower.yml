@@ -19,5 +19,7 @@ reports:
     display: "CKMR Parent-Offspring Results"
   sequoia/*_parentage_results.txt:
     display: "PBT Results"
+  summary/*_ckmrsim_rubias_summary.tsv:
+    display: "CKMRsim + Rubias Combined Summary"
 
 

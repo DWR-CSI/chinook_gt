@@ -26,20 +26,48 @@ index_markers <- function(M) {
     dplyr::ungroup()
 }
 
-reshape_paired_genotypes <- function(geno_df) {
-  geno_df %>%
-    pivot_longer(
-      cols = -SAMPLE_ID,
-      names_to = c("Locus", "gene_copy"),
-      names_pattern = "(.+)\\.(1|2)$",
-      values_to = "Allele"
-    ) %>%
-    mutate(
-      gene_copy = as.integer(gene_copy),
-      Allele = as.character(Allele)
-    ) %>%
-    rename(Indiv = SAMPLE_ID) %>%
-    select(Indiv, Locus, gene_copy, Allele)
+reshape_paired_genotypes <- function(geno_df, chunk_size = 500) {
+  n_rows <- nrow(geno_df)
+
+  if (n_rows <= chunk_size) {
+    # Small enough to process at once
+    return(
+      geno_df %>%
+        pivot_longer(
+          cols = -SAMPLE_ID,
+          names_to = c("Locus", "gene_copy"),
+          names_pattern = "(.+)\\.(1|2)$",
+          values_to = "Allele"
+        ) %>%
+        mutate(
+          gene_copy = as.integer(gene_copy),
+          Allele = as.character(Allele)
+        ) %>%
+        rename(Indiv = SAMPLE_ID) %>%
+        select(Indiv, Locus, gene_copy, Allele)
+    )
+  }
+
+  # Process in chunks
+  chunks <- split(1:n_rows, ceiling(1:n_rows / chunk_size))
+
+  result_list <- lapply(chunks, function(idx) {
+    geno_df[idx, ] %>%
+      pivot_longer(
+        cols = -SAMPLE_ID,
+        names_to = c("Locus", "gene_copy"),
+        names_pattern = "(.+)\\.(1|2)$",
+        values_to = "Allele"
+      ) %>%
+      mutate(
+        gene_copy = as.integer(gene_copy),
+        Allele = as.character(Allele)
+      ) %>%
+      rename(Indiv = SAMPLE_ID) %>%
+      select(Indiv, Locus, gene_copy, Allele)
+  })
+
+  bind_rows(result_list)
 }
 
 # Load arguments
@@ -272,4 +300,19 @@ if (logl_threshold != "auto" && !is.na(as.numeric(logl_threshold))) {
     arrange(desc(logl_ratio))
 }
 
-write_tsv(po_results_filtered, file = paste0(project_name, "_PO_results.tsv"))
+total_genos_long_dedup <- total_genos_long %>%
+  distinct(Indiv, Locus, gene_copy, .keep_all = TRUE)
+
+mendelian_incompatibilities <- tag_mendelian_incompatibilities(po_results_filtered, total_genos_long_dedup)
+
+sample_MI <- mendelian_incompatibilities %>%
+  filter(!is.na(is_MI)) %>%
+  group_by(D2_indiv, D1_indiv) %>%
+  summarize(total_incompat = sum(is_MI, na.rm = TRUE), total_compat = sum(!is_MI, na.rm = TRUE), .groups = 'keep') %>%
+  mutate(fraction_incompat = total_incompat / (total_incompat + total_compat))
+
+po_results_filtered_with_MI <- po_results_filtered %>%
+  left_join(sample_MI, by = c("D2_indiv","D1_indiv"))
+
+
+write_tsv(po_results_filtered_with_MI, file = paste0(project_name, "_PO_results.tsv"))

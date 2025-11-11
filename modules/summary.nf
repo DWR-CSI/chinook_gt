@@ -1,5 +1,5 @@
 process RUBIAS_SUMMARY {
-    tag "Generating summary statistics for RUBIAS: $reference"
+    tag "Generating summary statistics for RUBIAS."
     label 'process_small'
     container 'docker.io/rocker/tidyverse:4.5.2'
     publishDir "${params.outdir}/${params.project}/summary", mode: 'copy'
@@ -17,7 +17,7 @@ process RUBIAS_SUMMARY {
 }
 
 process CKMRSIM_RUBIAS_SUMMARY {
-    tag "Generating summary statistics for CKMRsim RUBIAS: $reference"
+    tag "Generating summary statistics for CKMRsim and RUBIAS."
     label 'process_small'
     container 'docker.io/rocker/tidyverse:4.5.2'
     publishDir "${params.outdir}/${params.project}/summary", mode: 'copy'

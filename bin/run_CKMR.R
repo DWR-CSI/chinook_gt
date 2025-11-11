@@ -299,7 +299,11 @@ if (logl_threshold != "auto" && !is.na(as.numeric(logl_threshold))) {
     filter(num_loc >= min_loci_threshold) %>%
     arrange(desc(logl_ratio))
 }
-mendelian_incompatibilities <- tag_mendelian_incompatibilities(po_results_filtered, total_genos_long)
+
+total_genos_long_dedup <- total_genos_long %>%
+  distinct(Indiv, Locus, gene_copy, .keep_all = TRUE)
+
+mendelian_incompatibilities <- tag_mendelian_incompatibilities(po_results_filtered, total_genos_long_dedup)
 
 sample_MI <- mendelian_incompatibilities %>%
   filter(!is.na(is_MI)) %>%

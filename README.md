@@ -12,6 +12,7 @@
   - [Processing Options](#processing-options)
   - [Microhaplotopia Options](#microhaplotopia-options)
   - [Threshold Options](#threshold-options)
+  - [CKMRsim Options](#ckmrsim-options)
   - [Sequoia Options](#sequoia-options)
   - [Loci Removal](#loci-removal)
 - [Output](#output)

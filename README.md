@@ -145,7 +145,7 @@ To create a custom profile for your environment:
   - **`use_CKMR`** (boolean, default: `false`)
   Enable CKMRsim for parent-offspring analysis. When enabled, the pipeline runs CKMRsim after genotype generation and can combine results with RUBIAS stock assignments.
 
-  - **`CKMR_parent_geno_input`** (path, default: `"az://seqera1/reference/full_panel/PBT/FRH2024_reference_genotypes.csv"`)
+  - **`CKMR_parent_geno_input`** (path, default: `"$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"`)
   Path to parent reference genotype file in wide-format CSV. File format requirements:
   Header row with `SAMPLE_ID` as first column, followed by locus names with `.1` and `.2` suffixes (e.g., `Locus1.1`, `Locus1.2`) Missing data should be coded consistently (currently, we use NA)
 
@@ -155,7 +155,7 @@ To create a custom profile for your environment:
   - **`CKMR_min_loci`** (integer, default: `90`, minimum: 1)
   Minimum number of loci required for a valid parent-offspring assignment.
 
-  - **`CKMR_extra_genos_allele_freqs`** (path, default: `"az://seqera1/reference/full_panel/PBT/JPE2022-2024_geno_wide.csv"`)
+  - **`CKMR_extra_genos_allele_freqs`** (path, default: `"$projectDir/examples/PBT/JPE2022-2024_geno_wide.csv"`)
   Path to extra genotypes file (wide-format CSV) containing additional individuals to include in allele frequency calculations. Including a larger and more representative sample improves the accuracy of kinship likelihood calculations. This file follows the same format as the parent genotype file.
 
 ### Sequoia Options

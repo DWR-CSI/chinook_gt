@@ -358,7 +358,7 @@ write_tsv(
 
 # Remove individuals with missing data above threshold
 cat("Filtering individuals with >", missing_thresholds * 100, "% missing data...\n")
-missing_rates <- rowMeans(is.na(geno_matrix))
+missing_rates <- rowMeans(geno_matrix == -9)
 filtered_geno_matrix <- geno_matrix[missing_rates < missing_thresholds, ]
 cat("Retained", nrow(filtered_geno_matrix), "of", nrow(geno_matrix), "individuals after filtering\n")
 

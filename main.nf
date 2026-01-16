@@ -110,6 +110,13 @@ include { CONCAT_READS } from './modules/concat_reads.nf'
 include { RUN_SEQUOIA } from './modules/sequoia.nf'
 include { CKMR_PO } from './modules/CKMRsim.nf'
 include { CKMRSIM_RUBIAS_SUMMARY } from './modules/summary.nf'
+// Full genome mapping modules (for LFAR, WRAP, VGLL3SIX6 loci)
+include { DOWNLOAD_AND_INDEX_GENOME } from './modules/fullgenome/download_genome'
+include { MAKE_THINNED_GENOME } from './modules/fullgenome/make_thinned_genome'
+include { MAP_TO_FULL_GENOME } from './modules/fullgenome/map_fullgenome'
+include { EXTRACT_READS_FROM_REGIONS } from './modules/fullgenome/extract_regions'
+include { BAM_TO_FASTQ } from './modules/fullgenome/bam_to_fastq'
+include { REMAP_TO_THINNED_GENOME } from './modules/fullgenome/remap_thinned'
 
 // Functions
 
@@ -167,7 +174,7 @@ def resolveReferences(params) {
     
     return reference_files
 }
-    
+
 workflow {
     log.info """
     ==============================================
@@ -205,9 +212,13 @@ workflow {
     """
     // Resolve and validate references
     reference_files = resolveReferences(params)
+
     // Create reference channel with associated files
-    Channel
-        .fromList(reference_files)
+    if (reference_files.isEmpty()) {
+        reference_ch = Channel.empty()
+    } else {
+        Channel
+            .fromList(reference_files)
         .flatMap { ref ->
             // For each reference, check all required index files
             def ref_file = file(ref)
@@ -226,7 +237,7 @@ workflow {
                 log.warn "Missing index files for ${ref}: ${missing_files}"
                 log.info "Please run BWA index to generate missing files..."
                 error "Fatal error: Missing required index files for ${ref}. Please ensure all necessary index files are present."
-                // You might want to add an INDEX_REFERENCE process here
+                // add an INDEX_REFERENCE process here in the future?
             }
             
             return ref_files
@@ -243,6 +254,7 @@ workflow {
             }
         }
         .set { reference_ch }
+    }
     
     // Define input channels
     adapters_ch = channel.fromPath(params.adapter_file)
@@ -374,15 +386,83 @@ workflow {
             TRIMMOMATIC_SINGLE.out.trimmed
         )
     }
-    
 
+    // Standard target FASTA mapping workflow (always runs for transition and full panels)
     bwa_input = ch_processed_reads.combine(reference_ch)
     BWA_MEM(bwa_input)
-    SAMTOOLS(BWA_MEM.out.aligned_sam)
+
+    // For 'full' panel, also run full genome mapping for VGLL3SIX6/LFAR/WRAP loci
+    // These loci require full genome mapping to correctly handle off-target amplicons
+    if (params.panel?.toLowerCase() == 'full') {
+        log.info "Running parallel full genome mapping for VGLL3SIX6/LFAR/WRAP loci"
+        log.info "Using combined region file: ${params.fullgenome_region_file}"
+
+        // Download and index the full genome (cached via storeDir)
+        DOWNLOAD_AND_INDEX_GENOME()
+
+        // Get the combined region file (contains all LFAR + WRAP + VGLL3SIX6 regions)
+        region_file = Channel.fromPath(params.fullgenome_region_file)
+
+        // Create thinned genome using combined regions (cached via storeDir)
+        MAKE_THINNED_GENOME(
+            params.fullgenome_ref_name,
+            DOWNLOAD_AND_INDEX_GENOME.out.genome,
+            DOWNLOAD_AND_INDEX_GENOME.out.fai,
+            region_file
+        )
+
+        // Collect genome index files for mapping
+        genome_indices = DOWNLOAD_AND_INDEX_GENOME.out.amb
+            .mix(DOWNLOAD_AND_INDEX_GENOME.out.ann)
+            .mix(DOWNLOAD_AND_INDEX_GENOME.out.bwt)
+            .mix(DOWNLOAD_AND_INDEX_GENOME.out.pac)
+            .mix(DOWNLOAD_AND_INDEX_GENOME.out.sa)
+            .collect()
+
+        // Map merged reads to full genome
+        MAP_TO_FULL_GENOME(
+            ch_processed_reads,
+            DOWNLOAD_AND_INDEX_GENOME.out.genome,
+            genome_indices
+        )
+
+        // Extract reads from target regions
+        EXTRACT_READS_FROM_REGIONS(
+            MAP_TO_FULL_GENOME.out.bam,
+            fullgenome_ref_name,
+            region_file
+        )
+
+        // Convert extracted BAM to FASTQ
+        BAM_TO_FASTQ(EXTRACT_READS_FROM_REGIONS.out.bam)
+
+        // Collect thinned genome index files for remapping
+        thinned_indices = MAKE_THINNED_GENOME.out.amb
+            .mix(MAKE_THINNED_GENOME.out.ann)
+            .mix(MAKE_THINNED_GENOME.out.bwt)
+            .mix(MAKE_THINNED_GENOME.out.pac)
+            .mix(MAKE_THINNED_GENOME.out.sa)
+            .collect()
+
+        // Remap to thinned genome for correct coordinates
+        REMAP_TO_THINNED_GENOME(
+            BAM_TO_FASTQ.out.fastq,
+            MAKE_THINNED_GENOME.out.fasta,
+            thinned_indices
+        )
+
+        // Merge SAM outputs from both workflows
+        ch_aligned_sam = BWA_MEM.out.aligned_sam.mix(REMAP_TO_THINNED_GENOME.out.aligned_sam)
+    } else {
+        // Transition panel - only target FASTA mapping
+        ch_aligned_sam = BWA_MEM.out.aligned_sam
+    }
+
+    SAMTOOLS(ch_aligned_sam)
     // Collect all idxstats files
     idxstats_files_sorted = SAMTOOLS.out.idxstats
-        .branch { 
-            main: it[1] ==~ /transition|full/
+        .branch {
+            main: it[1] ==~ /transition|full|Chinook_FullPanel_VGLL3Six6LFARWRAP/
             other: true
             }
 
@@ -409,22 +489,58 @@ workflow {
     // Join BAM and BAI groups by reference
     combined_bam_files = bam_by_ref
         .join(bai_by_ref)
-    
-    mpileup_input = combined_bam_files
-        .map { reference, bams, bais ->
-            def ref_file = reference_files
-                .collect { file(it) }
-                .find { it.simpleName == reference } // Find the reference file by name. Index files have a simplename that does not match.
-            if (!ref_file) {
-                error "No exact match found for reference: ${reference}. Use 'full' as the reference panel."
+
+    // Build mpileup_input - need to match reference files to BAM groups
+    // For 'full' panel, we have two reference types: "full" and "Chinook_FullPanel_VGLL3Six6LFARWRAP"
+    if (params.panel?.toLowerCase() == 'full') {
+        // Split by reference type
+        combined_bam_files
+            .branch {
+                fullgenome: it[0] == params.fullgenome_ref_name
+                targetfasta: true
             }
-            tuple(reference, bams, bais, ref_file)
-        }
+            .set { bam_branches }
+
+        // Target FASTA BAMs - match to reference_files
+        mpileup_targetfasta = bam_branches.targetfasta
+            .map { reference, bams, bais ->
+                def ref_file = reference_files
+                    .collect { file(it) }
+                    .find { it.simpleName == reference }
+                if (!ref_file) {
+                    error "No exact match found for reference: ${reference}"
+                }
+                tuple(reference, bams, bais, ref_file)
+            }
+
+        // Full genome BAMs - use thinned genome
+        mpileup_fullgenome = bam_branches.fullgenome
+            .combine(MAKE_THINNED_GENOME.out.fasta)
+            .map { reference, bams, bais, ref_fasta ->
+                tuple(reference, bams, bais, ref_fasta)
+            }
+
+        // Merge both
+        mpileup_input = mpileup_targetfasta.mix(mpileup_fullgenome)
+    } else {
+        // Transition panel - only target FASTA references
+        mpileup_input = combined_bam_files
+            .map { reference, bams, bais ->
+                def ref_file = reference_files
+                    .collect { file(it) }
+                    .find { it.simpleName == reference }
+                if (!ref_file) {
+                    error "No exact match found for reference: ${reference}. Use 'full' as the reference panel."
+                }
+                tuple(reference, bams, bais, ref_file)
+            }
+    }
 
     BCFTOOLS_MPILEUP(mpileup_input)
     GREB_HAPSTR(BCFTOOLS_MPILEUP.out.filtered_vcf, rosa_allele_key_ch)
 
-    BWA_MEM.out.aligned_sam
+    // Group SAM files for microhaplotype analysis
+    ch_aligned_sam
         .groupTuple(by: 1)
         .map { sample_id, ref_name, sam_files ->
             // Search for VCF file in data/VCFs directory of projectDir

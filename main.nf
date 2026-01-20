@@ -24,6 +24,7 @@ if (!params.project) {
 }
 
 // Set default values for thresholds if not specified in configs
+params.fullgenome_ref_name = params.fullgenome_ref_name ?: 'Chinook_FullPanel_VGLL3Six6LFARWRAP'
 params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
 params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
 params.pofz_threshold = params.pofz_threshold ?: 0.8
@@ -429,7 +430,7 @@ workflow {
         // Extract reads from target regions
         EXTRACT_READS_FROM_REGIONS(
             MAP_TO_FULL_GENOME.out.bam,
-            fullgenome_ref_name,
+            params.fullgenome_ref_name,
             region_file
         )
 
@@ -462,7 +463,7 @@ workflow {
     // Collect all idxstats files
     idxstats_files_sorted = SAMTOOLS.out.idxstats
         .branch {
-            main: it[1] ==~ /transition|full|Chinook_FullPanel_VGLL3Six6LFARWRAP/
+            main: it[1] ==~ /transition|full|${params.fullgenome_ref_name}/
             other: true
             }
 

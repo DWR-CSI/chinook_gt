@@ -15,8 +15,11 @@ process EXTRACT_READS_FROM_REGIONS {
 
     script:
     """
-    samtools view -u ${fullg_bam} \$(cat ${region_file}) \
-    | samtools sort -T ${sample_id}_tmp -O bam -o ${sample_id}_${panel}_extracted.bam -
+    # Extract reads from target regions to intermediate BAM
+    samtools view -u -o ${sample_id}_${panel}_unsorted.bam ${fullg_bam} \$(cat ${region_file})
+
+    # Sort the extracted reads
+    samtools sort -T ${sample_id}_tmp -O bam -o ${sample_id}_${panel}_extracted.bam ${sample_id}_${panel}_unsorted.bam
 
     samtools index ${sample_id}_${panel}_extracted.bam
     """

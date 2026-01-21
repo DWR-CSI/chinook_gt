@@ -2,8 +2,8 @@ process MAP_TO_FULL_GENOME {
     tag "Map ${sample_id} to full genome"
     label 'process_high'
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/mulled-v2-30758c5e2be407d6bbf2570c832fb245e8488634:33e45705f656cfb3e5268b3d075c838c719a0fa2':
-        'quay.io/biocontainers/mulled-v2-30758c5e2be407d6bbf2570c832fb245e8488634:33e45705f656cfb3e5268b3d075c838c719a0fa2' }"
+        'https://depot.galaxyproject.org/singularity/mulled-v2-fe8faa35dbf6dc65a0f7f5d4ea12e31a79f73e40:bd996097b6dd518cf788ddd6c586fb23d039cb9c-0':
+        'quay.io/biocontainers/mulled-v2-fe8faa35dbf6dc65a0f7f5d4ea12e31a79f73e40:bd996097b6dd518cf788ddd6c586fb23d039cb9c-0' }"
 
     input:
     tuple val(sample_id), path(merged_reads)
@@ -15,13 +15,17 @@ process MAP_TO_FULL_GENOME {
 
     script:
     """
+    # Write SAM to file first to avoid pipe buffering issues
     bwa mem \
         -t ${task.cpus} \
         -R "@RG\\tID:${sample_id}\\tLB:amplicon\\tPL:ILLUMINA\\tSM:${sample_id}" \
         ${genome} \
         ${merged_reads} \
-    | samtools view -u - \
-    | samtools sort -T ${sample_id}_tmp -O bam -o ${sample_id}_fullg.bam -
+        > ${sample_id}_fullg.sam
+
+    # Convert to BAM and sort
+    samtools view -u ${sample_id}_fullg.sam | \
+        samtools sort -T ${sample_id}_tmp -O bam -o ${sample_id}_fullg.bam -
 
     samtools index ${sample_id}_fullg.bam
     """

@@ -303,16 +303,24 @@ if (logl_threshold != "auto" && !is.na(as.numeric(logl_threshold))) {
 total_genos_long_dedup <- total_genos_long %>%
   distinct(Indiv, Locus, gene_copy, .keep_all = TRUE)
 
-mendelian_incompatibilities <- tag_mendelian_incompatibilities(po_results_filtered, total_genos_long_dedup)
+# Check if any PO pairs were found above threshold
+if (nrow(po_results_filtered) == 0) {
+  cat("No parent-offspring pairs found above log-likelihood threshold of", logl_threshold, "\n")
+  cat("Writing empty results file.\n")
+  po_results_filtered_with_MI <- po_results_filtered %>%
+    mutate(total_incompat = NA_integer_, total_compat = NA_integer_, fraction_incompat = NA_real_)
+} else {
+  cat("Found", nrow(po_results_filtered), "potential parent-offspring pairs above threshold.\n")
+  mendelian_incompatibilities <- tag_mendelian_incompatibilities(po_results_filtered, total_genos_long_dedup)
 
-sample_MI <- mendelian_incompatibilities %>%
-  filter(!is.na(is_MI)) %>%
-  group_by(D2_indiv, D1_indiv) %>%
-  summarize(total_incompat = sum(is_MI, na.rm = TRUE), total_compat = sum(!is_MI, na.rm = TRUE), .groups = 'keep') %>%
-  mutate(fraction_incompat = total_incompat / (total_incompat + total_compat))
+  sample_MI <- mendelian_incompatibilities %>%
+    filter(!is.na(is_MI)) %>%
+    group_by(D2_indiv, D1_indiv) %>%
+    summarize(total_incompat = sum(is_MI, na.rm = TRUE), total_compat = sum(!is_MI, na.rm = TRUE), .groups = 'keep') %>%
+    mutate(fraction_incompat = total_incompat / (total_incompat + total_compat))
 
-po_results_filtered_with_MI <- po_results_filtered %>%
-  left_join(sample_MI, by = c("D2_indiv","D1_indiv"))
-
+  po_results_filtered_with_MI <- po_results_filtered %>%
+    left_join(sample_MI, by = c("D2_indiv","D1_indiv"))
+}
 
 write_tsv(po_results_filtered_with_MI, file = paste0(project_name, "_PO_results.tsv"))

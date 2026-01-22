@@ -17,20 +17,20 @@ find_missing_samples2 <- function (raw_data, filtered_data)
   missing_samples
 }
 
-# 1. Find the correct .rds file
+# 1. Find the correct .rds files
 dirFiles <- list.files()
 rds.file <- grep(".rds", dirFiles)
 pos.rds.file <- grep("_posinfo.rds", dirFiles)
 annotate.rds.file <- grep("_annotate.rds", dirFiles)
-rds.file <- setdiff(rds.file, c(pos.rds.file, annotate.rds.file))
-input_file <- dirFiles[rds.file[1]]  # Select the first matching file
+rds.files.to.read <- setdiff(rds.file, c(pos.rds.file, annotate.rds.file))
 
 # 2. Load and preprocess the data
-mhp_RDS_file <- readRDS(input_file)
-hap <- mhp_RDS_file %>%
+# Read all RDS files and combine them
+hap <- map_dfr(dirFiles[rds.files.to.read], function(f) {
+  readRDS(f)
+}) %>%
   rename(
     indiv.ID = id
-    
   ) %>% 
   dplyr::filter(haplo != "haplo") %>%
   mutate(

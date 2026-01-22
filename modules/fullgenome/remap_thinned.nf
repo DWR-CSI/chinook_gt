@@ -11,7 +11,7 @@ process REMAP_TO_THINNED_GENOME {
     path thinned_index_files
 
     output:
-    tuple val(sample_id), val(panel), path("${sample_id}_${panel}_thinned_aln.sam"), emit: aligned_sam
+    tuple val(sample_id), val(panel), path("${sample_id}_${panel}_aln.sam"), emit: aligned_sam
 
     script:
     """
@@ -20,6 +20,6 @@ process REMAP_TO_THINNED_GENOME {
         -R "@RG\\tID:${sample_id}\\tLB:amplicon\\tPL:ILLUMINA\\tSM:${sample_id}" \
         ${thinned_fasta} \
         ${extracted_fastq} \
-        > ${sample_id}_${panel}_thinned_aln.sam
+        > ${sample_id}_${panel}_aln.sam
     """
 }

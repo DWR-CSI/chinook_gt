@@ -258,7 +258,8 @@ workflow {
     }
     
     // Define input channels
-    adapters_ch = channel.fromPath(params.adapter_file)
+    def adapter_file_final = params.adapter_file ?: "${projectDir}/data/adapters/GTseq-PE.fa"
+    adapters_ch = channel.fromPath(adapter_file_final)
 
     def locus_index_file
     if (params.containsKey('locus_index')) {
@@ -538,7 +539,15 @@ workflow {
     }
 
     BCFTOOLS_MPILEUP(mpileup_input)
-    GREB_HAPSTR(BCFTOOLS_MPILEUP.out.filtered_vcf, rosa_allele_key_ch)
+
+    // Filter VCFs for Greb Hapstr (RoSA) - only need the main reference, not full genome
+    BCFTOOLS_MPILEUP.out.filtered_vcf
+        .filter { reference, vcf -> 
+             reference != params.fullgenome_ref_name 
+        }
+        .set { vcf_for_rosa }
+
+    GREB_HAPSTR(vcf_for_rosa, rosa_allele_key_ch)
 
     // Group SAM files for microhaplotype analysis
     ch_aligned_sam
@@ -552,11 +561,28 @@ workflow {
             }
             tuple(sample_id, ref_name, vcfFile, sam_files)
         }
-        .set { grouped_sam_files }
-    //grouped_sam_files.view { println "Debug: Grouped SAM files: $it" }
+        .set { packed_for_mhp }
+    
+    // Generate samplesheets
+    GEN_MHP_SAMPLE_SHEET(packed_for_mhp)
 
-    // Now you can use grouped_sam_files in your next process
-    GEN_MHP_SAMPLE_SHEET(grouped_sam_files)
+    // Run Microhaplot to generate RDS files
+    PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet)
+
+    // MERGING LOGIC:
+    // If we have multiple RDS files (e.g. from target and full genome panels), we need to merge them.
+    // Collect all RDS files across all references
+    PREP_MHP_RDS.out.rds
+        .map { reference, rds_files -> rds_files }
+        .collect()
+        .map { all_rds_files -> 
+             // Use a generic reference name for the combined set, or just use the project name
+             tuple("combined", all_rds_files) 
+        }
+        .set { combined_rds }
+
+    // Run GEN_HAPS on the combined set of RDS files
+    GEN_HAPS(combined_rds)
 
     // Collect all QC files
     ch_multiqc_files = Channel.empty()
@@ -568,12 +594,11 @@ workflow {
     //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
     MULTIQC(ch_multiqc_files.collect())
 
-    // Run the microhaplotype analysis
-    PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet)
-    GEN_HAPS(PREP_MHP_RDS.out.rds)
-
     // Run Rubias analyses
+    // For Run Rubias, we need to handle the fact that GREB_HAPSTR runs on the main reference, 
+    // but GEN_HAPS runs on "combined".
     RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps, ANALYZE_IDXSTATS.out.sexid)
+    
     // Run CKMR analysis
     if (params.use_CKMR) {
         par_geno_wide = Channel.fromPath(params.CKMR_parent_geno_input, checkIfExists: true)

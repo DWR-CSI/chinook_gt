@@ -26,6 +26,7 @@ if (!params.project) {
 // Set default values for thresholds if not specified in configs
 params.fullgenome_ref_name = params.fullgenome_ref_name ?: 'Chinook_FullPanel_VGLL3Six6LFARWRAP'
 params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
+params.full_genome_mount_path = params.full_genome_mount_path ?: null
 params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
 params.pofz_threshold = params.pofz_threshold ?: 0.8
 params.concat_all_reads = params.concat_all_reads ?: false
@@ -403,27 +404,42 @@ workflow {
         log.info "Running parallel full genome mapping for VGLL3SIX6/LFAR/WRAP loci"
         log.info "Using combined region file: ${params.fullgenome_region_file}"
 
-        // Download and index the full genome (cached via storeDir)
-        DOWNLOAD_AND_INDEX_GENOME()
+        // Determine if using mount path or staged files
+        def mount_path = params.full_genome_mount_path
+        def use_mount = mount_path != null
+        
+        // Initialize channel variables
+        def ch_genome = Channel.empty()
+        def ch_genome_fai = Channel.empty()
+        def ch_genome_indices = Channel.empty()
+
+        if (use_mount) {
+            log.info "Using mounted genome at: ${mount_path}"
+            // Skip DOWNLOAD_AND_INDEX_GENOME
+        } else {
+            // Download and index the full genome (cached via storeDir)
+            DOWNLOAD_AND_INDEX_GENOME()
+            ch_genome = DOWNLOAD_AND_INDEX_GENOME.out.genome
+            ch_genome_fai = DOWNLOAD_AND_INDEX_GENOME.out.fai
+            ch_genome_indices = DOWNLOAD_AND_INDEX_GENOME.out.amb
+                .mix(DOWNLOAD_AND_INDEX_GENOME.out.ann)
+                .mix(DOWNLOAD_AND_INDEX_GENOME.out.bwt)
+                .mix(DOWNLOAD_AND_INDEX_GENOME.out.pac)
+                .mix(DOWNLOAD_AND_INDEX_GENOME.out.sa)
+                .collect()
+        }
 
         // Get the combined region file (contains all LFAR + WRAP + VGLL3SIX6 regions)
         region_file = Channel.fromPath(params.fullgenome_region_file).collect()
 
         // Create thinned genome using combined regions (cached via storeDir)
+        // If use_mount is true, ch_genome and ch_genome_fai are empty, but mount_path is used
         MAKE_THINNED_GENOME(
             params.fullgenome_ref_name,
-            DOWNLOAD_AND_INDEX_GENOME.out.genome,
-            DOWNLOAD_AND_INDEX_GENOME.out.fai,
+            ch_genome,
+            ch_genome_fai,
             region_file
         )
-
-        // Collect genome index files for mapping
-        genome_indices = DOWNLOAD_AND_INDEX_GENOME.out.amb
-            .mix(DOWNLOAD_AND_INDEX_GENOME.out.ann)
-            .mix(DOWNLOAD_AND_INDEX_GENOME.out.bwt)
-            .mix(DOWNLOAD_AND_INDEX_GENOME.out.pac)
-            .mix(DOWNLOAD_AND_INDEX_GENOME.out.sa)
-            .collect()
 
         // Map merged reads to full genome
         MAP_TO_FULL_GENOME(

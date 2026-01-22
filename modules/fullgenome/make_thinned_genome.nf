@@ -24,7 +24,7 @@ process MAKE_THINNED_GENOME {
 
     script:
     """
-    samtools faidx ${genome} \$(cat ${region_file}) > thinned.fna
+    samtools faidx ${params.full_genome_mount_path ? "${params.full_genome_mount_path}/reference/genomes/Otsh_v1.0/Otsh_v1.0.fna" : genome} \$(cat ${region_file}) > thinned.fna
     bwa index thinned.fna
     samtools faidx thinned.fna
     """

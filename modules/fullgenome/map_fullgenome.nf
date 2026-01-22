@@ -19,7 +19,7 @@ process MAP_TO_FULL_GENOME {
     bwa mem \
         -t ${task.cpus} \
         -R "@RG\\tID:${sample_id}\\tLB:amplicon\\tPL:ILLUMINA\\tSM:${sample_id}" \
-        ${genome} \
+        ${params.full_genome_mount_path ? "${params.full_genome_mount_path}/Otsh_v1.0/Otsh_v1.0.fna" : genome} \
         ${merged_reads} \
         > ${sample_id}_fullg.sam
 

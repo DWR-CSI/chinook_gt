@@ -184,6 +184,9 @@ workflow {
     ==============================================
     Panel Type : ${params.panel ?: 'Not specified'}
     References : ${params.reference ? 'User specified' : 'Auto-selected'}
+    Full Genome Ref : ${params.fullgenome_ref_name ?: 'N/A'}
+    Region File     : ${params.fullgenome_region_file ?: 'N/A'}
+    Adapter File    : ${params.adapter_file ?: 'Default'}
     
     Microhaplotopia filtering parameters:
     Haplotype Depth Filter  : ${params.haplotype_depth}
@@ -404,7 +407,7 @@ workflow {
         DOWNLOAD_AND_INDEX_GENOME()
 
         // Get the combined region file (contains all LFAR + WRAP + VGLL3SIX6 regions)
-        region_file = Channel.fromPath(params.fullgenome_region_file)
+        region_file = Channel.fromPath(params.fullgenome_region_file).collect()
 
         // Create thinned genome using combined regions (cached via storeDir)
         MAKE_THINNED_GENOME(
@@ -425,7 +428,7 @@ workflow {
         // Map merged reads to full genome
         MAP_TO_FULL_GENOME(
             ch_processed_reads,
-            DOWNLOAD_AND_INDEX_GENOME.out.genome,
+            DOWNLOAD_AND_INDEX_GENOME.out.genome.collect(),
             genome_indices
         )
 
@@ -450,7 +453,7 @@ workflow {
         // Remap to thinned genome for correct coordinates
         REMAP_TO_THINNED_GENOME(
             BAM_TO_FASTQ.out.fastq,
-            MAKE_THINNED_GENOME.out.fasta,
+            MAKE_THINNED_GENOME.out.fasta.collect(),
             thinned_indices
         )
 
@@ -570,7 +573,6 @@ workflow {
     // Run Microhaplot to generate RDS files
     PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet)
 
-    // MERGING LOGIC:
     // If we have multiple RDS files (e.g. from target and full genome panels), we need to merge them.
     // Collect all RDS files across all references
     PREP_MHP_RDS.out.rds
@@ -594,10 +596,7 @@ workflow {
     ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect{it[2]})
     //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
     MULTIQC(ch_multiqc_files.collect())
-
-    // Run Rubias analyses
-    // For Run Rubias, we need to handle the fact that GREB_HAPSTR runs on the main reference, 
-    // but GEN_HAPS runs on "combined".
+    
     RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps, ANALYZE_IDXSTATS.out.sexid)
     
     // Run CKMR analysis

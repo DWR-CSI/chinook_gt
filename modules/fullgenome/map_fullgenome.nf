@@ -58,10 +58,16 @@ process MAP_TO_FULL_GENOME_MOUNT {
 
     # Write SAM to file first to avoid pipe buffering issues
     # Capture stderr to identify mount/memory issues
+    
+    # Copy to local disk to avoid file share throttling
+    echo "Copying genome to local disk..."
+    cp "\$GENOME_FILE"* .
+    LOCAL_GENOME="Otsh_v1.0.fna"
+
     if ! bwa mem \
         -t ${task.cpus} \
         -R "@RG\\tID:${sample_id}\\tLB:amplicon\\tPL:ILLUMINA\\tSM:${sample_id}" \
-        \$GENOME_FILE \
+        \$LOCAL_GENOME \
         ${merged_reads} \
         > ${sample_id}_fullg.sam 2> bwa.stderr; then
         

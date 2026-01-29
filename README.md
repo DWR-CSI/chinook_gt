@@ -124,7 +124,7 @@ To create a custom profile for your environment:
   Path to the genome cache directory. This directory is used to store the reference genome and BWA indices after they are downloaded and indexed for the first time. If not specified, the pipeline will attempt to use a default path of `${projectDir}/data/genome_cache`.
 
 - **`full_genome_mount_path`** (path)
-  **Required for Azure Batch execution (`-profile azure`)** when running the full panel in large numbers.
+  **Required for Azure Batch execution (`-profile azure`)** when running the full panel in large numbers. This should **not** be set when not using Azure File Share.
   Specifies the absolute path to the mounted Azure File Share directory containing the reference genome and BWA indices.
   Example: `/mnt/batch/tasks/fsmounts/seqres/reference/genomes`
   

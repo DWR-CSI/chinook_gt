@@ -24,7 +24,9 @@ if (!params.project) {
 }
 
 // Set default values for thresholds if not specified in configs
+params.fullgenome_ref_name = params.fullgenome_ref_name ?: 'Chinook_FullPanel_VGLL3Six6LFARWRAP'
 params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
+params.full_genome_mount_path = params.full_genome_mount_path ?: null
 params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
 params.pofz_threshold = params.pofz_threshold ?: 0.8
 params.concat_all_reads = params.concat_all_reads ?: false
@@ -49,6 +51,7 @@ params.CKMR_logl_threshold = params.CKMR_logl_threshold ?: 6.9
 params.CKMR_min_loci = params.CKMR_min_loci ?: 90
 params.CKMR_parent_geno_input = params.CKMR_parent_geno_input ?: "$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"
 params.CKMR_extra_genos_allele_freqs = params.CKMR_extra_genos_allele_freqs ?: "$projectDir/examples/PBT/JPE2022-2024_geno_wide.csv"
+params.fullgenome_region_file = params.fullgenome_region_file ?: "$projectDir/data/regions/Chinook_FullPanel_VGLL3Six6LFARWRAP-Otsh_v1.0.txt"
 
 // Validate numeric threshold ranges
 if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
@@ -110,6 +113,13 @@ include { CONCAT_READS } from './modules/concat_reads.nf'
 include { RUN_SEQUOIA } from './modules/sequoia.nf'
 include { CKMR_PO } from './modules/CKMRsim.nf'
 include { CKMRSIM_RUBIAS_SUMMARY } from './modules/summary.nf'
+// Full genome mapping modules (for LFAR, WRAP, VGLL3SIX6 loci)
+include { DOWNLOAD_AND_INDEX_GENOME } from './modules/fullgenome/download_genome'
+include { MAKE_THINNED_GENOME; MAKE_THINNED_GENOME_MOUNT } from './modules/fullgenome/make_thinned_genome'
+include { MAP_TO_FULL_GENOME; MAP_TO_FULL_GENOME_MOUNT } from './modules/fullgenome/map_fullgenome'
+include { EXTRACT_READS_FROM_REGIONS } from './modules/fullgenome/extract_regions'
+include { BAM_TO_FASTQ } from './modules/fullgenome/bam_to_fastq'
+include { REMAP_TO_THINNED_GENOME } from './modules/fullgenome/remap_thinned'
 
 // Functions
 
@@ -167,7 +177,7 @@ def resolveReferences(params) {
     
     return reference_files
 }
-    
+
 workflow {
     log.info """
     ==============================================
@@ -175,6 +185,9 @@ workflow {
     ==============================================
     Panel Type : ${params.panel ?: 'Not specified'}
     References : ${params.reference ? 'User specified' : 'Auto-selected'}
+    Full Genome Ref : ${params.fullgenome_ref_name ?: 'N/A'}
+    Region File     : ${params.fullgenome_region_file ?: 'N/A'}
+    Adapter File    : ${params.adapter_file ?: 'Default'}
     
     Microhaplotopia filtering parameters:
     Haplotype Depth Filter  : ${params.haplotype_depth}
@@ -205,9 +218,13 @@ workflow {
     """
     // Resolve and validate references
     reference_files = resolveReferences(params)
+
     // Create reference channel with associated files
-    Channel
-        .fromList(reference_files)
+    if (reference_files.isEmpty()) {
+        reference_ch = Channel.empty()
+    } else {
+        Channel
+            .fromList(reference_files)
         .flatMap { ref ->
             // For each reference, check all required index files
             def ref_file = file(ref)
@@ -226,7 +243,7 @@ workflow {
                 log.warn "Missing index files for ${ref}: ${missing_files}"
                 log.info "Please run BWA index to generate missing files..."
                 error "Fatal error: Missing required index files for ${ref}. Please ensure all necessary index files are present."
-                // You might want to add an INDEX_REFERENCE process here
+                // add an INDEX_REFERENCE process here in the future?
             }
             
             return ref_files
@@ -243,9 +260,11 @@ workflow {
             }
         }
         .set { reference_ch }
+    }
     
     // Define input channels
-    adapters_ch = channel.fromPath(params.adapter_file)
+    def adapter_file_final = params.adapter_file ?: "${projectDir}/data/adapters/GTseq-PE.fa"
+    adapters_ch = channel.fromPath(adapter_file_final)
 
     def locus_index_file
     if (params.containsKey('locus_index')) {
@@ -374,15 +393,122 @@ workflow {
             TRIMMOMATIC_SINGLE.out.trimmed
         )
     }
-    
 
+    // Standard target FASTA mapping workflow (always runs for transition and full panels)
     bwa_input = ch_processed_reads.combine(reference_ch)
     BWA_MEM(bwa_input)
-    SAMTOOLS(BWA_MEM.out.aligned_sam)
+
+    // For 'full' panel, also run full genome mapping for VGLL3SIX6/LFAR/WRAP loci
+    // These loci require full genome mapping to correctly handle off-target amplicons
+    def ch_thinned_fasta = Channel.empty()
+    if (params.panel?.toLowerCase() == 'full') {
+        log.info "Running parallel full genome mapping for VGLL3SIX6/LFAR/WRAP loci"
+        log.info "Using combined region file: ${params.fullgenome_region_file}"
+
+        // Initialize channels for merging downstream
+        ch_thinned_fasta = Channel.empty()
+        def ch_map_bam = Channel.empty()
+        def ch_thinned_indices = Channel.empty() // Will collect indices differently
+
+        // Get the combined region file (contains all LFAR + WRAP + VGLL3SIX6 regions)
+        region_file = Channel.fromPath(params.fullgenome_region_file).collect()
+
+        if (params.full_genome_mount_path) {
+            log.info "Using mounted genome at: ${params.full_genome_mount_path}"
+            
+            // Create thinned genome using mounted files
+            MAKE_THINNED_GENOME_MOUNT(
+                params.fullgenome_ref_name,
+                params.full_genome_mount_path,
+                region_file
+            )
+            
+            // Map merged reads using mounted files
+            MAP_TO_FULL_GENOME_MOUNT(
+                ch_processed_reads,
+                params.full_genome_mount_path
+            )
+
+            ch_thinned_fasta = MAKE_THINNED_GENOME_MOUNT.out.fasta
+            ch_map_bam = MAP_TO_FULL_GENOME_MOUNT.out.bam
+
+            // Collect indices from Mount version
+            ch_thinned_indices = MAKE_THINNED_GENOME_MOUNT.out.amb
+                .mix(MAKE_THINNED_GENOME_MOUNT.out.ann)
+                .mix(MAKE_THINNED_GENOME_MOUNT.out.bwt)
+                .mix(MAKE_THINNED_GENOME_MOUNT.out.pac)
+                .mix(MAKE_THINNED_GENOME_MOUNT.out.sa)
+                .collect()
+
+        } else {
+            // Standard approach: Download and Index
+            DOWNLOAD_AND_INDEX_GENOME()
+            
+            ch_genome_indices = DOWNLOAD_AND_INDEX_GENOME.out.amb
+                .mix(DOWNLOAD_AND_INDEX_GENOME.out.ann)
+                .mix(DOWNLOAD_AND_INDEX_GENOME.out.bwt)
+                .mix(DOWNLOAD_AND_INDEX_GENOME.out.pac)
+                .mix(DOWNLOAD_AND_INDEX_GENOME.out.sa)
+                .collect()
+
+            // Create thinned genome
+            MAKE_THINNED_GENOME(
+                params.fullgenome_ref_name,
+                DOWNLOAD_AND_INDEX_GENOME.out.genome,
+                DOWNLOAD_AND_INDEX_GENOME.out.fai,
+                region_file
+            )
+
+            // Map merged reads
+            MAP_TO_FULL_GENOME(
+                ch_processed_reads,
+                DOWNLOAD_AND_INDEX_GENOME.out.genome,
+                ch_genome_indices
+            )
+
+            ch_thinned_fasta = MAKE_THINNED_GENOME.out.fasta
+            ch_map_bam = MAP_TO_FULL_GENOME.out.bam
+            
+            // Collect indices from Standard version
+            ch_thinned_indices = MAKE_THINNED_GENOME.out.amb
+                .mix(MAKE_THINNED_GENOME.out.ann)
+                .mix(MAKE_THINNED_GENOME.out.bwt)
+                .mix(MAKE_THINNED_GENOME.out.pac)
+                .mix(MAKE_THINNED_GENOME.out.sa)
+                .collect()
+        }
+
+
+
+        // Extract reads from target regions (works with bam from either path)
+        EXTRACT_READS_FROM_REGIONS(
+            ch_map_bam,
+            params.fullgenome_ref_name,
+            region_file
+        )
+
+        // Convert extracted BAM to FASTQ
+        BAM_TO_FASTQ(EXTRACT_READS_FROM_REGIONS.out.bam)
+
+        // Remap to thinned genome for correct coordinates
+        REMAP_TO_THINNED_GENOME(
+            BAM_TO_FASTQ.out.fastq,
+            ch_thinned_fasta,
+            ch_thinned_indices
+        )
+
+        // Merge SAM outputs from both workflows
+        ch_aligned_sam = BWA_MEM.out.aligned_sam.mix(REMAP_TO_THINNED_GENOME.out.aligned_sam)
+    } else {
+        // Transition panel - only target FASTA mapping
+        ch_aligned_sam = BWA_MEM.out.aligned_sam
+    }
+
+    SAMTOOLS(ch_aligned_sam)
     // Collect all idxstats files
     idxstats_files_sorted = SAMTOOLS.out.idxstats
-        .branch { 
-            main: it[1] ==~ /transition|full/
+        .branch {
+            main: it[1] ==~ /transition|full|${params.fullgenome_ref_name}/
             other: true
             }
 
@@ -409,22 +535,66 @@ workflow {
     // Join BAM and BAI groups by reference
     combined_bam_files = bam_by_ref
         .join(bai_by_ref)
-    
-    mpileup_input = combined_bam_files
-        .map { reference, bams, bais ->
-            def ref_file = reference_files
-                .collect { file(it) }
-                .find { it.simpleName == reference } // Find the reference file by name. Index files have a simplename that does not match.
-            if (!ref_file) {
-                error "No exact match found for reference: ${reference}. Use 'full' as the reference panel."
+
+    // Build mpileup_input - need to match reference files to BAM groups
+    // For 'full' panel, we have two reference types: "full" and "Chinook_FullPanel_VGLL3Six6LFARWRAP"
+    if (params.panel?.toLowerCase() == 'full') {
+        // Split by reference type
+        combined_bam_files
+            .branch {
+                fullgenome: it[0] == params.fullgenome_ref_name
+                targetfasta: true
             }
-            tuple(reference, bams, bais, ref_file)
-        }
+            .set { bam_branches }
+
+        // Target FASTA BAMs - match to reference_files
+        mpileup_targetfasta = bam_branches.targetfasta
+            .map { reference, bams, bais ->
+                def ref_file = reference_files
+                    .collect { file(it) }
+                    .find { it.simpleName == reference }
+                if (!ref_file) {
+                    error "No exact match found for reference: ${reference}"
+                }
+                tuple(reference, bams, bais, ref_file)
+            }
+
+        // Full genome BAMs - use thinned genome
+        mpileup_fullgenome = bam_branches.fullgenome
+            .combine(ch_thinned_fasta)
+            .map { reference, bams, bais, ref_fasta ->
+                tuple(reference, bams, bais, ref_fasta)
+            }
+
+        // Merge both
+        mpileup_input = mpileup_targetfasta.mix(mpileup_fullgenome)
+    } else {
+        // Transition panel - only target FASTA references
+        mpileup_input = combined_bam_files
+            .map { reference, bams, bais ->
+                def ref_file = reference_files
+                    .collect { file(it) }
+                    .find { it.simpleName == reference }
+                if (!ref_file) {
+                    error "No exact match found for reference: ${reference}. Use 'full' as the reference panel."
+                }
+                tuple(reference, bams, bais, ref_file)
+            }
+    }
 
     BCFTOOLS_MPILEUP(mpileup_input)
-    GREB_HAPSTR(BCFTOOLS_MPILEUP.out.filtered_vcf, rosa_allele_key_ch)
 
-    BWA_MEM.out.aligned_sam
+    // Filter VCFs for Greb Hapstr (RoSA) - only need the main reference, not full genome
+    BCFTOOLS_MPILEUP.out.filtered_vcf
+        .filter { reference, vcf -> 
+             reference != params.fullgenome_ref_name 
+        }
+        .set { vcf_for_rosa }
+
+    GREB_HAPSTR(vcf_for_rosa, rosa_allele_key_ch)
+
+    // Group SAM files for microhaplotype analysis
+    ch_aligned_sam
         .groupTuple(by: 1)
         .map { sample_id, ref_name, sam_files ->
             // Search for VCF file in data/VCFs directory of projectDir
@@ -435,11 +605,27 @@ workflow {
             }
             tuple(sample_id, ref_name, vcfFile, sam_files)
         }
-        .set { grouped_sam_files }
-    //grouped_sam_files.view { println "Debug: Grouped SAM files: $it" }
+        .set { packed_for_mhp }
+    
+    // Generate samplesheets
+    GEN_MHP_SAMPLE_SHEET(packed_for_mhp)
 
-    // Now you can use grouped_sam_files in your next process
-    GEN_MHP_SAMPLE_SHEET(grouped_sam_files)
+    // Run Microhaplot to generate RDS files
+    PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet)
+
+    // If we have multiple RDS files (e.g. from target and full genome panels), we need to merge them.
+    // Collect all RDS files across all references
+    PREP_MHP_RDS.out.rds
+        .map { reference, rds_files -> rds_files }
+        .collect()
+        .map { all_rds_files -> 
+             // Use a generic reference name for the combined set, or just use the project name
+             tuple("combined", all_rds_files) 
+        }
+        .set { combined_rds }
+
+    // Run GEN_HAPS on the combined set of RDS files
+    GEN_HAPS(combined_rds)
 
     // Collect all QC files
     ch_multiqc_files = Channel.empty()
@@ -450,13 +636,9 @@ workflow {
     ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect{it[2]})
     //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
     MULTIQC(ch_multiqc_files.collect())
-
-    // Run the microhaplotype analysis
-    PREP_MHP_RDS(GEN_MHP_SAMPLE_SHEET.out.mhp_samplesheet)
-    GEN_HAPS(PREP_MHP_RDS.out.rds)
-
-    // Run Rubias analyses
+    
     RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps, ANALYZE_IDXSTATS.out.sexid)
+    
     // Run CKMR analysis
     if (params.use_CKMR) {
         par_geno_wide = Channel.fromPath(params.CKMR_parent_geno_input, checkIfExists: true)

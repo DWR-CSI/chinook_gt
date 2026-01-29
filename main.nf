@@ -115,8 +115,8 @@ include { CKMR_PO } from './modules/CKMRsim.nf'
 include { CKMRSIM_RUBIAS_SUMMARY } from './modules/summary.nf'
 // Full genome mapping modules (for LFAR, WRAP, VGLL3SIX6 loci)
 include { DOWNLOAD_AND_INDEX_GENOME } from './modules/fullgenome/download_genome'
-include { MAKE_THINNED_GENOME } from './modules/fullgenome/make_thinned_genome'
-include { MAP_TO_FULL_GENOME } from './modules/fullgenome/map_fullgenome'
+include { MAKE_THINNED_GENOME; MAKE_THINNED_GENOME_MOUNT } from './modules/fullgenome/make_thinned_genome'
+include { MAP_TO_FULL_GENOME; MAP_TO_FULL_GENOME_MOUNT } from './modules/fullgenome/map_fullgenome'
 include { EXTRACT_READS_FROM_REGIONS } from './modules/fullgenome/extract_regions'
 include { BAM_TO_FASTQ } from './modules/fullgenome/bam_to_fastq'
 include { REMAP_TO_THINNED_GENOME } from './modules/fullgenome/remap_thinned'
@@ -400,57 +400,89 @@ workflow {
 
     // For 'full' panel, also run full genome mapping for VGLL3SIX6/LFAR/WRAP loci
     // These loci require full genome mapping to correctly handle off-target amplicons
+    def ch_thinned_fasta = Channel.empty()
     if (params.panel?.toLowerCase() == 'full') {
         log.info "Running parallel full genome mapping for VGLL3SIX6/LFAR/WRAP loci"
         log.info "Using combined region file: ${params.fullgenome_region_file}"
 
-        // Determine if using mount path or staged files
-        def mount_path = params.full_genome_mount_path
-        def use_mount = mount_path != null
-        
-        // Initialize channel variables
-        def ch_genome = Channel.empty()
-        def ch_genome_fai = Channel.empty()
-        def ch_genome_indices = Channel.empty()
+        // Initialize channels for merging downstream
+        ch_thinned_fasta = Channel.empty()
+        def ch_map_bam = Channel.empty()
+        def ch_thinned_indices = Channel.empty() // Will collect indices differently
 
-        if (use_mount) {
-            log.info "Using mounted genome at: ${mount_path}"
-            // Skip DOWNLOAD_AND_INDEX_GENOME
+        // Get the combined region file (contains all LFAR + WRAP + VGLL3SIX6 regions)
+        region_file = Channel.fromPath(params.fullgenome_region_file).collect()
+
+        if (params.full_genome_mount_path) {
+            log.info "Using mounted genome at: ${params.full_genome_mount_path}"
+            
+            // Create thinned genome using mounted files
+            MAKE_THINNED_GENOME_MOUNT(
+                params.fullgenome_ref_name,
+                params.full_genome_mount_path,
+                region_file
+            )
+            
+            // Map merged reads using mounted files
+            MAP_TO_FULL_GENOME_MOUNT(
+                ch_processed_reads,
+                params.full_genome_mount_path
+            )
+
+            ch_thinned_fasta = MAKE_THINNED_GENOME_MOUNT.out.fasta
+            ch_map_bam = MAP_TO_FULL_GENOME_MOUNT.out.bam
+
+            // Collect indices from Mount version
+            ch_thinned_indices = MAKE_THINNED_GENOME_MOUNT.out.amb
+                .mix(MAKE_THINNED_GENOME_MOUNT.out.ann)
+                .mix(MAKE_THINNED_GENOME_MOUNT.out.bwt)
+                .mix(MAKE_THINNED_GENOME_MOUNT.out.pac)
+                .mix(MAKE_THINNED_GENOME_MOUNT.out.sa)
+                .collect()
+
         } else {
-            // Download and index the full genome (cached via storeDir)
+            // Standard approach: Download and Index
             DOWNLOAD_AND_INDEX_GENOME()
-            ch_genome = DOWNLOAD_AND_INDEX_GENOME.out.genome
-            ch_genome_fai = DOWNLOAD_AND_INDEX_GENOME.out.fai
+            
             ch_genome_indices = DOWNLOAD_AND_INDEX_GENOME.out.amb
                 .mix(DOWNLOAD_AND_INDEX_GENOME.out.ann)
                 .mix(DOWNLOAD_AND_INDEX_GENOME.out.bwt)
                 .mix(DOWNLOAD_AND_INDEX_GENOME.out.pac)
                 .mix(DOWNLOAD_AND_INDEX_GENOME.out.sa)
                 .collect()
+
+            // Create thinned genome
+            MAKE_THINNED_GENOME(
+                params.fullgenome_ref_name,
+                DOWNLOAD_AND_INDEX_GENOME.out.genome,
+                DOWNLOAD_AND_INDEX_GENOME.out.fai,
+                region_file
+            )
+
+            // Map merged reads
+            MAP_TO_FULL_GENOME(
+                ch_processed_reads,
+                DOWNLOAD_AND_INDEX_GENOME.out.genome,
+                ch_genome_indices
+            )
+
+            ch_thinned_fasta = MAKE_THINNED_GENOME.out.fasta
+            ch_map_bam = MAP_TO_FULL_GENOME.out.bam
+            
+            // Collect indices from Standard version
+            ch_thinned_indices = MAKE_THINNED_GENOME.out.amb
+                .mix(MAKE_THINNED_GENOME.out.ann)
+                .mix(MAKE_THINNED_GENOME.out.bwt)
+                .mix(MAKE_THINNED_GENOME.out.pac)
+                .mix(MAKE_THINNED_GENOME.out.sa)
+                .collect()
         }
 
-        // Get the combined region file (contains all LFAR + WRAP + VGLL3SIX6 regions)
-        region_file = Channel.fromPath(params.fullgenome_region_file).collect()
 
-        // Create thinned genome using combined regions (cached via storeDir)
-        // If use_mount is true, ch_genome and ch_genome_fai are empty, but mount_path is used
-        MAKE_THINNED_GENOME(
-            params.fullgenome_ref_name,
-            ch_genome,
-            ch_genome_fai,
-            region_file
-        )
 
-        // Map merged reads to full genome
-        MAP_TO_FULL_GENOME(
-            ch_processed_reads,
-            DOWNLOAD_AND_INDEX_GENOME.out.genome.collect(),
-            genome_indices
-        )
-
-        // Extract reads from target regions
+        // Extract reads from target regions (works with bam from either path)
         EXTRACT_READS_FROM_REGIONS(
-            MAP_TO_FULL_GENOME.out.bam,
+            ch_map_bam,
             params.fullgenome_ref_name,
             region_file
         )
@@ -458,19 +490,11 @@ workflow {
         // Convert extracted BAM to FASTQ
         BAM_TO_FASTQ(EXTRACT_READS_FROM_REGIONS.out.bam)
 
-        // Collect thinned genome index files for remapping
-        thinned_indices = MAKE_THINNED_GENOME.out.amb
-            .mix(MAKE_THINNED_GENOME.out.ann)
-            .mix(MAKE_THINNED_GENOME.out.bwt)
-            .mix(MAKE_THINNED_GENOME.out.pac)
-            .mix(MAKE_THINNED_GENOME.out.sa)
-            .collect()
-
         // Remap to thinned genome for correct coordinates
         REMAP_TO_THINNED_GENOME(
             BAM_TO_FASTQ.out.fastq,
-            MAKE_THINNED_GENOME.out.fasta.collect(),
-            thinned_indices
+            ch_thinned_fasta,
+            ch_thinned_indices
         )
 
         // Merge SAM outputs from both workflows
@@ -537,7 +561,7 @@ workflow {
 
         // Full genome BAMs - use thinned genome
         mpileup_fullgenome = bam_branches.fullgenome
-            .combine(MAKE_THINNED_GENOME.out.fasta)
+            .combine(ch_thinned_fasta)
             .map { reference, bams, bais, ref_fasta ->
                 tuple(reference, bams, bais, ref_fasta)
             }

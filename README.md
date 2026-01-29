@@ -118,6 +118,18 @@ To create a custom profile for your environment:
 - **`loci_to_remove`** (string, default: see below)
   Perl-compatible regular expression to match loci column names to remove from analysis. See [Loci Removal](#loci-removal) section for details.
 
+### Full Genome Mapping Options
+
+- **`genome_cache`** (path)
+  Path to the genome cache directory. This directory is used to store the reference genome and BWA indices after they are downloaded and indexed for the first time. If not specified, the pipeline will attempt to use a default path of `${projectDir}/data/genome_cache`.
+
+- **`full_genome_mount_path`** (path)
+  **Required for Azure Batch execution (`-profile azure`)** when running the full panel in large numbers.
+  Specifies the absolute path to the mounted Azure File Share directory containing the reference genome and BWA indices.
+  Example: `/mnt/batch/tasks/fsmounts/seqres/reference/genomes`
+  
+  **Note:** The pipeline expects the genome file to be located at `Otsh_v1.0/Otsh_v1.0.fna` relative to this path, along with its associated BWA index files (e.g., `.bwt`, `.sa`, etc.).
+
 ### Microhaplotopia Options
 
 - **`haplotype_depth`** (integer, default: `4`)

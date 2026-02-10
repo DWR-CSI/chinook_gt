@@ -15,7 +15,7 @@ process ANALYZE_IDXSTATS {
     path "*.{pdf,jpg,png}", emit: plots
     path "reads_matrix.txt", emit: matrix
     path "*.{csv,txt}", emit: loci_qc
-    path "sex_id_results.tsv", emit: sexid
+    path "*sex_id_results.tsv", emit: sexid
     
     script:
     """
@@ -46,6 +46,8 @@ process ANALYZE_IDXSTATS {
 
     # Sex ID function
     determine_sex <- function(df, sexid_locus = "sdy_I183", min_total_reads, min_male_prop, max_female_prop) {
+      df <- df %>%
+        filter(str_detect(ind, "VGLL3Six6LFARWRAP", negate = TRUE))
       total_read_counts <- df %>%
         group_by(ind) %>%
         summarize(total_reads = sum(reads))
@@ -98,7 +100,7 @@ process ANALYZE_IDXSTATS {
       min_male_prop = sex_id_male_threshold,
       max_female_prop = sex_id_female_threshold
       )
-    write_tsv(sex_id_info, "sex_id_results.tsv")
+    write_tsv(sex_id_info, "${params.project}_sex_id_results.tsv")
 
     # Generate idxstats plots
     plot_reads_by_ind <- ggplot(idx_df, aes(x = ind, y = reads)) +

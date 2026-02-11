@@ -36,10 +36,10 @@ process ANALYZE_IDXSTATS {
     sex_id_female_threshold <- $params.female_sexid_threshold # must have fewer than this many sdy_I183 reads mapped
 
     ## Functions ---------------
-    # Function to process a single idxstats file
-    process_idxstats <- function(file, n_loci) {
+    # Function to process a idxstats files
+    process_idxstats <- function(file, ind, n_loci) {
       df <- read.table(file, nrows = n_loci, stringsAsFactors = FALSE)
-      ind <- str_remove(basename(file), "_((full|transition)_)?idxstats.txt")
+      df <- df[df\$V1 != "*", ] # remove rows with "*" in the first column
       df\$ind <- ind
       return(df)
     }
@@ -47,7 +47,7 @@ process ANALYZE_IDXSTATS {
     # Sex ID function
     determine_sex <- function(df, sexid_locus = "sdy_I183", min_total_reads, min_male_prop, max_female_prop) {
       df <- df %>%
-        filter(str_detect(ind, "VGLL3Six6LFARWRAP", negate = TRUE))
+        filter(str_detect(ind, "_Chinook_FullPanel_VGLL3Six6LFARWRAP", negate = TRUE)) # just in case any fgm data is missed
       total_read_counts <- df %>%
         group_by(ind) %>%
         summarize(total_reads = sum(reads))
@@ -68,10 +68,24 @@ process ANALYZE_IDXSTATS {
     }
     
     # List all idxstats files in the input directory
-    files <- list.files(pattern = "_idxstats.txt\$", full.names = TRUE)
+    target_mapped_files <- tibble(
+        file = list.files(pattern = "_full_idxstats.txt\$", full.names = TRUE)
+        ) %>%
+      mutate(
+        ind = str_remove(basename(file), "_((full|transition)_)?idxstats.txt")
+      )
+
+    fgm_files <- tibble(
+        file = list.files(pattern = "_Chinook_FullPanel_VGLL3Six6LFARWRAP_idxstats.txt\$", full.names = TRUE)
+        ) %>%
+      mutate(
+        ind = str_remove(basename(file), "_Chinook_FullPanel_VGLL3Six6LFARWRAP_idxstats.txt")
+      )
+
+    file_list <- bind_rows(target_mapped_files, fgm_files)
     
     # Process all files
-    idx_list <- map(files, ~ process_idxstats(.x, TOTAL_PANEL_LOCI))
+    idx_list <- map2(file_list\$file, file_list\$ind, ~ process_idxstats(.x, .y, TOTAL_PANEL_LOCI))
     
     # Combine into a single data frame
     idx_df <- bind_rows(idx_list)

@@ -33,5 +33,3 @@ offspring_maxBY: 2025
 offspring_max_age: 8
 species_min_repro_age: 1
 species_max_repro_age: 8
-genome_cache: "../cache"
-full_genome_mount_path: "/mnt/batch/tasks/fsmounts/seqres/reference/genomes"

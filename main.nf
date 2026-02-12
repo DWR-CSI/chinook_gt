@@ -52,6 +52,7 @@ params.CKMR_min_loci = params.CKMR_min_loci ?: 90
 params.CKMR_parent_geno_input = params.CKMR_parent_geno_input ?: "$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"
 params.CKMR_extra_genos_allele_freqs = params.CKMR_extra_genos_allele_freqs ?: "$projectDir/examples/PBT/JPE2022-2024_geno_wide.csv"
 params.fullgenome_region_file = params.fullgenome_region_file ?: "$projectDir/data/regions/Chinook_FullPanel_VGLL3Six6LFARWRAP-Otsh_v1.0.txt"
+params.fullgenome_chunk_size = params.fullgenome_chunk_size ?: 30
 
 // Validate numeric threshold ranges
 if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
@@ -424,13 +425,18 @@ workflow {
             )
             
             // Map merged reads using mounted files
+            // Chunk inputs to reduce genome copy overhead
+            ch_processed_reads_chunked = ch_processed_reads
+                .buffer(size: params.fullgenome_chunk_size, remainder: true)
+                .map { chunk -> tuple(chunk.collect{it[0]}, chunk.collect{it[1]}) }
+
             MAP_TO_FULL_GENOME_MOUNT(
-                ch_processed_reads,
+                ch_processed_reads_chunked,
                 params.full_genome_mount_path
             )
 
             ch_thinned_fasta = MAKE_THINNED_GENOME_MOUNT.out.fasta
-            ch_map_bam = MAP_TO_FULL_GENOME_MOUNT.out.bam
+            ch_map_bam = MAP_TO_FULL_GENOME_MOUNT.out.bam.transpose()
 
             // Collect indices from Mount version
             ch_thinned_indices = MAKE_THINNED_GENOME_MOUNT.out.amb
@@ -460,14 +466,19 @@ workflow {
             )
 
             // Map merged reads
+            // Chunk inputs to reduce genome copy overhead
+            ch_processed_reads_chunked = ch_processed_reads
+                .buffer(size: params.fullgenome_chunk_size, remainder: true)
+                .map { chunk -> tuple(chunk.collect{it[0]}, chunk.collect{it[1]}) }
+
             MAP_TO_FULL_GENOME(
-                ch_processed_reads,
+                ch_processed_reads_chunked,
                 DOWNLOAD_AND_INDEX_GENOME.out.genome,
                 ch_genome_indices
             )
 
             ch_thinned_fasta = MAKE_THINNED_GENOME.out.fasta
-            ch_map_bam = MAP_TO_FULL_GENOME.out.bam
+            ch_map_bam = MAP_TO_FULL_GENOME.out.bam.transpose()
             
             // Collect indices from Standard version
             ch_thinned_indices = MAKE_THINNED_GENOME.out.amb

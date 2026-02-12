@@ -108,7 +108,7 @@
                 "male_sexid_threshold": {
                     "type": "number",
                     "description": "Minimum proportion of reads mapped to the Y chromosome (sdy_I183 locus) to classify a sample as male",
-                    "default": 0.02,
+                    "default": 0.01,
                     "minimum": 0,
                     "maximum": 1
                 },

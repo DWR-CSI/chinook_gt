@@ -165,7 +165,7 @@ ptypes_analyzed <- analyze_run_timing(ptypes)
 write_tsv(ptypes_analyzed, file = str_c(project_name, "_RoSA_hapstrs.tsv"))
 
 ptypes_report <- ptypes_analyzed %>%
-    select(indiv = Indiv, RoSA = timing_call, ots28_missing) %>%
+    select(indiv = Indiv, RoSA = timing_call, ots28_missing, hapstr) %>%
     mutate(
         RoSA = case_when(
             RoSA == "Insufficient_Data" ~ "Uncertain",

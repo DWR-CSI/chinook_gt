@@ -444,6 +444,7 @@ mix_results_wide <- all_full_mix_results %>%
   select(
     SampleID = indiv,
     RoSA,
+    hapstr,
     RoSA_perc_missing = ots28_missing,
     GSI_perc_missing,
     Fall = fall,
@@ -471,7 +472,7 @@ mix_results_wide_w_extras <- mix_results_wide %>%
       TRUE ~ final_call
     )
   ) %>%
-  select(SampleID, RoSA, RoSA_perc_missing, GSI_perc_missing, Fall, Late_fall, Spring, Winter, final_call, probability, tributary, trib_PofZ, Species, heterozygosity, LFAR_markers_present, inferred_sex)
+  select(SampleID, RoSA, hapstr, RoSA_perc_missing, GSI_perc_missing, Fall, Late_fall, Spring, Winter, final_call, probability, tributary, trib_PofZ, Species, heterozygosity, LFAR_markers_present, inferred_sex)
 write_tsv(
   mix_results_wide_w_extras,
   file = stringr::str_c(project_name, "_summary.tsv")

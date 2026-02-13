@@ -238,7 +238,7 @@ ots28_info <- read_tsv(ots28_info_file) %>%
     )
   ) %>%
   filter(indiv %in% unks$indiv) %>%
-  select(indiv, RoSA, ots28_missing)
+  select(indiv, RoSA, ots28_missing, hapstr)
 # Combine unknowns and reference baseline ----------------
 unk_match <- unks %>%
   select(any_of(names(ref_baseline))) # Keep only columns (loci) that are in ref_baseline

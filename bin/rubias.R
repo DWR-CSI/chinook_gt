@@ -187,14 +187,8 @@ unks_alphageno <- args[6] %>%
 
 ots28_missing_threshold <- as.numeric(args[7]) * 100 # If less than this much OTS28 data is missing, consider OTS28 data Intermediate instead of uncertain. Multiplied by 100 to get percentage
 gsi_missing_threshold <- as.numeric(args[8]) # If more than this much GSI data is missing, consider GSI data invalid
-<<<<<<< main
-PofZ_threshold <- as.numeric(args[9]) # If the maximum PofZ is less than this, consider the result ambiguous
-Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
-sex_id_file <- args[10] # Sex ID results file from idxstats analysis
-=======
 #PofZ_threshold <- as.numeric(args[9]) # If the maximum PofZ is less than this, consider the result ambiguous
 #Spring_PofZ_threshold <- PofZ_threshold # Not currently used, but could be used to set a minimum PofZ for spring trib calls
->>>>>>> JPE
 
 # Get loci removal regex from environment variable
 loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
@@ -455,38 +449,6 @@ mix_results_wide <- all_full_mix_results %>%
   mutate(across(c(RoSA, final_call), toupper)) %>%
   select(
     SampleID = indiv,
-<<<<<<< main
-    RoSA,
-    hapstr,
-    RoSA_perc_missing = ots28_missing,
-    GSI_perc_missing,
-    Fall = fall,
-    Late_fall = latefall,
-    Spring = spring,
-    Winter = winter,
-    final_call,
-    probability
-  ) %>%
-  left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID") %>%
-  mutate(
-    trib_PofZ = if_else(!(final_call %in% c("Missing Data", "Fall / Late Fall", "Spring / Winter")), round(trib_PofZ, digits = 3), NA_real_),
-    final_call = str_to_title(final_call)
-  )
-
-mix_results_wide_w_extras <- mix_results_wide %>%
-  left_join(species_results, by = "SampleID") %>%
-  left_join(heterozygosity_results, by = "SampleID") %>%
-  left_join(LFAR_results, by = "SampleID") %>%
-  left_join(sex_id_results, by = "SampleID") %>%
-  mutate(
-    final_call = case_when(
-      Species == "non-Chinook" ~ "non-Chinook",
-      (LFAR_markers_present == FALSE) & (final_call %in% c("Fall", "Latefall")) ~ "Fall / Late Fall", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
-      TRUE ~ final_call
-    )
-  ) %>%
-  select(SampleID, RoSA, hapstr, RoSA_perc_missing, GSI_perc_missing, Fall, Late_fall, Spring, Winter, final_call, probability, tributary, trib_PofZ, Species, heterozygosity, LFAR_markers_present, inferred_sex)
-=======
     Chr28_missing,
     GSI_missing,
     Gtseq_Chr28_Geno = RoSA,
@@ -516,7 +478,7 @@ mix_results_wide_w_extras <- mix_results_wide %>%
 #       TRUE ~ Pop_Structure_ID
 #     )
 #   )
->>>>>>> JPE
+
 write_tsv(
   mix_results_wide,
   file = stringr::str_c(project_name, "_summary.tsv"),

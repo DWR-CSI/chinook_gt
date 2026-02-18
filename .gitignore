@@ -9,3 +9,5 @@ output/*
 *.log*
 .vscode/*
 test/*
+data/genome_cache/*
+.gitignore

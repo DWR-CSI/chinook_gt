@@ -199,6 +199,11 @@ if (loci_removal_regex == "") {
   cat("No loci removal regex specified - no loci will be removed\n")
 }
 
+# Read sex ID results
+sex_id_results <- read_tsv(sex_id_file) %>%
+  mutate(ind = clean_sample_name(ind)) %>%
+  select(SampleID = ind, inferred_sex)
+
 # Parse OTS28 info file ----------------
 
 
@@ -234,7 +239,7 @@ ots28_info <- read_tsv(ots28_info_file) %>%
     )
   ) %>%
   filter(indiv %in% unks$indiv) %>%
-  select(indiv, RoSA, ots28_missing)
+  select(indiv, RoSA, ots28_missing, hapstr)
 # Combine unknowns and reference baseline ----------------
 unk_match <- unks %>%
   select(any_of(names(ref_baseline))) # Keep only columns (loci) that are in ref_baseline
@@ -473,6 +478,7 @@ mix_results_wide <- all_full_mix_results %>%
 #       TRUE ~ Pop_Structure_ID
 #     )
 #   )
+
 write_tsv(
   mix_results_wide,
   file = stringr::str_c(project_name, "_summary.tsv"),

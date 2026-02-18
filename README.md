@@ -12,6 +12,7 @@
   - [Processing Options](#processing-options)
   - [Microhaplotopia Options](#microhaplotopia-options)
   - [Threshold Options](#threshold-options)
+  - [CKMRsim Options](#ckmrsim-options)
   - [Sequoia Options](#sequoia-options)
   - [Loci Removal](#loci-removal)
 - [Output](#output)
@@ -117,6 +118,18 @@ To create a custom profile for your environment:
 - **`loci_to_remove`** (string, default: see below)
   Perl-compatible regular expression to match loci column names to remove from analysis. See [Loci Removal](#loci-removal) section for details.
 
+### Full Genome Mapping Options
+
+- **`genome_cache`** (path)
+  Path to the genome cache directory. This directory is used to store the reference genome and BWA indices after they are downloaded and indexed for the first time. If not specified, the pipeline will attempt to use a default path of `${projectDir}/data/genome_cache`.
+
+- **`full_genome_mount_path`** (path)
+  **Required for Azure Batch execution (`-profile azure`)** when running the full panel in large numbers. This should **not** be set when not using Azure File Share.
+  Specifies the absolute path to the mounted Azure File Share directory containing the reference genome and BWA indices.
+  Example: `/mnt/batch/tasks/fsmounts/seqres/reference/genomes`
+  
+  **Note:** The pipeline expects the genome file to be located at `Otsh_v1.0/Otsh_v1.0.fna` relative to this path, along with its associated BWA index files (e.g., `.bwt`, `.sa`, etc.).
+
 ### Microhaplotopia Options
 
 - **`haplotype_depth`** (integer, default: `4`)
@@ -138,6 +151,24 @@ To create a custom profile for your environment:
 
 - **`pofz_threshold`** (number, default: `0.8`, range: 0-1)
   If the maximum Probability of Z-score (PofZ) is less than this value, consider the result ambiguous.
+
+### CKMRsim Options
+
+  - **`use_CKMR`** (boolean, default: `false`)
+  Enable CKMRsim for parent-offspring analysis. When enabled, the pipeline runs CKMRsim after genotype generation and can combine results with RUBIAS stock assignments.
+
+  - **`CKMR_parent_geno_input`** (path, default: `"$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"`)
+  Path to parent reference genotype file in wide-format CSV. File format requirements:
+  Header row with `SAMPLE_ID` as first column, followed by locus names with `.1` and `.2` suffixes (e.g., `Locus1.1`, `Locus1.2`) Missing data should be coded consistently (currently, we use NA)
+
+  - **`CKMR_logl_threshold`** (number, default: `6.9`, minimum: 0)
+  Log-likelihood ratio threshold for identifying parent-offspring relationships. Results with log-likelihood ratios below this threshold are filtered out.
+
+  - **`CKMR_min_loci`** (integer, default: `90`, minimum: 1)
+  Minimum number of loci required for a valid parent-offspring assignment.
+
+  - **`CKMR_extra_genos_allele_freqs`** (path, default: `"$projectDir/examples/PBT/JPE2022-2024_geno_wide.csv"`)
+  Path to extra genotypes file (wide-format CSV) containing additional individuals to include in allele frequency calculations. Including a larger and more representative sample improves the accuracy of kinship likelihood calculations. This file follows the same format as the parent genotype file.
 
 ### Sequoia Options
 
@@ -212,6 +243,8 @@ results (user-specified name)/
 │   ├── bwa/                 # Alignment files (BAM)
 │   ├── microhaplotopia/     # Microhaplotype calling outputs
 │   ├── rubias/              # Genetic stock assignment results
+│   ├── ckmrsim/             # Parent-offspring analysis with CKMRsim (if enabled)
+│   ├── summary/             # Summary report files (if CKMRsim enabled)
 │   ├── sequoia/             # Parentage analysis (if enabled)
 │   └── multiqc/             # Aggregated QC report
 ```
@@ -223,13 +256,25 @@ results (user-specified name)/
 - `*_filtered_haplotype.csv` - Processed genotype data used for RUBIAS analysis
 - `*_observed_unfiltered_haplotype.csv` - Raw haplotype data before filtering
 
-
 **Quality Control:**
 - `multiqc/multiqc_report.html` - Comprehensive quality metrics across all samples
 
-**Parentage Analysis (sequoia/ directory, if enabled):**
+**Sequoia Parentage Analysis (sequoia/ directory, if enabled):**
 - `*_sequoia_parentage_results.txt` - Parent-offspring assignments
 - `*_sequoia_output.rds` - Sequoia R object for troubleshooting or more detailed information.
+
+**CKMRsim Analysis (if enabled):**
+- `*_PO_results.tsv` - Parent-offspring assignments with quality metrics. Columns include:
+  - `D2_indiv`: Offspring sample ID
+  - `D1_indiv`: Parent sample ID
+  - `logl_ratio`: Log-likelihood ratio for parent-offspring vs. unrelated
+  - `num_loc`: Number of loci used in comparison
+  - `total_incompat`: Number of Mendelian incompatibilities detected
+  - `fraction_incompat`: Proportion of loci with incompatibilities (useful for quality control)
+- `*_PO_ckmr.rds` - CKMRsim R object containing the CKMR model
+- `*_offspring_genotypes_long.rds` - Processed offspring genotypes in long format
+- `*_parent_genotypes_long.rds` - Processed parent genotypes in long format
+- `*_summary.tsv` - Combined RUBIAS and CKMRsim results (when both are enabled). Found in summary subfolder within the main results folder.
 
 ## Troubleshooting
 

@@ -15,6 +15,7 @@ process ANALYZE_IDXSTATS {
     path "*.{pdf,jpg,png}", emit: plots
     path "reads_matrix.txt", emit: matrix
     path "*.{csv,txt}", emit: loci_qc
+    path "*sex_id_results.tsv", emit: sexid
     
     script:
     """
@@ -30,20 +31,61 @@ process ANALYZE_IDXSTATS {
     TOTAL_PANEL_LOCI <- 204
     MIN_READS <- 10
     POOR_PERFORMANCE_THRESHOLD <- 0.5
-    
-    # Function to process a single idxstats file
-    process_idxstats <- function(file, n_loci) {
+    sex_id_male_threshold <- $params.male_sexid_threshold # must have more than this many sdy_I183 reads mapped
+    sex_id_min_total_reads <- $params.sexid_min_reads # must have at least this many total reads mapped or else sample is unknown sex
+    sex_id_female_threshold <- $params.female_sexid_threshold # must have fewer than this many sdy_I183 reads mapped
+
+    ## Functions ---------------
+    # Function to process a idxstats files
+    process_idxstats <- function(file, ind, n_loci) {
       df <- read.table(file, nrows = n_loci, stringsAsFactors = FALSE)
-      ind <- str_remove(basename(file), "_((full|transition)_)?idxstats.txt")
+      df <- df[df\$V1 != "*", ] # remove rows with "*" in the first column
       df\$ind <- ind
       return(df)
     }
+
+    # Sex ID function
+    determine_sex <- function(df, sexid_locus = "sdy_I183", min_total_reads, min_male_prop, max_female_prop) {
+      df <- df %>%
+        filter(str_detect(ind, "_Chinook_FullPanel_VGLL3Six6LFARWRAP", negate = TRUE)) # just in case any fgm data is missed
+      total_read_counts <- df %>%
+        group_by(ind) %>%
+        summarize(total_reads = sum(reads))
+      sex_marker_reads <- df %>%
+        filter(loc == sexid_locus) %>%
+        select(ind, sex_marker_reads = reads)
+      sex_id_df <- total_read_counts %>%
+        left_join(sex_marker_reads, by = 'ind') %>%
+        mutate(
+          sex_marker_read_prop = sex_marker_reads / total_reads,
+          inferred_sex = case_when(
+            sex_marker_read_prop > min_male_prop & total_reads > min_total_reads ~ "Male",
+            sex_marker_read_prop < max_female_prop & total_reads > min_total_reads ~ "Female",
+            TRUE ~ "Unknown"
+            )
+          )
+      return(sex_id_df)
+    }
     
     # List all idxstats files in the input directory
-    files <- list.files(pattern = "_idxstats.txt\$", full.names = TRUE)
+    target_mapped_files <- tibble(
+        file = list.files(pattern = "_full_idxstats.txt\$", full.names = TRUE)
+        ) %>%
+      mutate(
+        ind = str_remove(basename(file), "_((full|transition)_)?idxstats.txt")
+      )
+
+    fgm_files <- tibble(
+        file = list.files(pattern = "_Chinook_FullPanel_VGLL3Six6LFARWRAP_idxstats.txt\$", full.names = TRUE)
+        ) %>%
+      mutate(
+        ind = str_remove(basename(file), "_Chinook_FullPanel_VGLL3Six6LFARWRAP_idxstats.txt")
+      )
+
+    file_list <- bind_rows(target_mapped_files, fgm_files)
     
     # Process all files
-    idx_list <- map(files, ~ process_idxstats(.x, TOTAL_PANEL_LOCI))
+    idx_list <- map2(file_list\$file, file_list\$ind, ~ process_idxstats(.x, .y, TOTAL_PANEL_LOCI))
     
     # Combine into a single data frame
     idx_df <- bind_rows(idx_list)
@@ -65,7 +107,15 @@ process ANALYZE_IDXSTATS {
         loc = factor(loc, levels = locs\$loc),
         ind = factor(ind, levels = inds\$ind)
       )
-    
+    # Generate Sex ID info
+    sex_id_info <- determine_sex(
+      idx_df,
+      min_total_reads = sex_id_min_total_reads,
+      min_male_prop = sex_id_male_threshold,
+      max_female_prop = sex_id_female_threshold
+      )
+    write_tsv(sex_id_info, "${params.project}_sex_id_results.tsv")
+
     # Generate idxstats plots
     plot_reads_by_ind <- ggplot(idx_df, aes(x = ind, y = reads)) +
       geom_col(fill = "lightblue", colour = "black") +

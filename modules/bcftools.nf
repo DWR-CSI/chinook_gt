@@ -16,10 +16,16 @@ process BCFTOOLS_MPILEUP {
     
     script:
     """
+    # Increase the file descriptor limit
+    ulimit -n 8192 || ulimit -Sn \$(ulimit -Hn) || true
+
+    # Write BAM files to a list to avoid "Argument list too long" errors
+    ls *.bam > bam_list.txt
+
     bcftools mpileup -a AD,DP,INFO/AD \
         -B -q 20 -Q 20 \
         -f ${ref} \
-        ${bams.join(' ')} \
+        -b bam_list.txt \
         | bcftools call -v -m \
         | bcftools sort \
         | bcftools norm -m +any -f ${ref} \

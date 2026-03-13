@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinook GT Run Identification Rubric</title>
+    <!-- Use Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body {
+                background: white;
+            }
+
+            .no-print {
+                display: none;
+            }
+
+            .print-break {
+                page-break-after: always;
+            }
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #e2e8f0;
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 font-sans leading-relaxed">
+
+    <div class="max-w-4xl mx-auto my-10 p-8 bg-white shadow-lg rounded-lg print:shadow-none print:m-0 print:p-0">
+
+        <div class="flex justify-between items-center mb-8 border-b pb-4">
+            <h1 class="text-3xl font-bold text-gray-900">Chinook GT Run Identification Rubric</h1>
+            <button onclick="window.print()"
+                class="no-print bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded shadow">
+                Save as PDF
+            </button>
+        </div>
+
+        <p class="mb-6">This document outlines the decision logic used to assign <code>final_call</code> and
+            <code>tributary</code> designations in the <code>rubias.R</code> pipeline.</p>
+
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
+            <p class="text-sm">The process flows sequentially. Below are the steps that evaluate parameters generated
+                from GSI and diagnostic locus models to arrive at the final determinations.</p>
+        </div>
+
+        <h2 class="text-2xl font-semibold mb-4 text-gray-800">1. Parameters Used</h2>
+        <ul class="list-disc pl-6 mb-8 space-y-2">
+            <li><strong>Species:</strong> Determined by the OkiOts_120255.113 diagnostic marker ("Chinook",
+                "non-Chinook", etc.)</li>
+            <li><strong>fraction_missing:</strong> Proportion of missing data
+                <code>(n_miss_loci / (n_miss_loci + n_non_miss_loci))</code></li>
+            <li><strong>gsi_missing_threshold:</strong> Maximum threshold for missing data (parameter
+                <code>args[8]</code>)</li>
+            <li><strong>RoSA:</strong> Phenotypic run timing prediction from the OTS28 marker ("Early", "Late",
+                "Intermediate", "Uncertain")</li>
+            <li><strong>Prob_repunit:</strong> Maximum posterior probability (PofZ) across reporting units</li>
+            <li><strong>PofZ_threshold:</strong> Minimum probability threshold for a confident assignment (parameter
+                <code>args[9]</code>)</li>
+            <li><strong>repunit:</strong> Highest likelihood assigned reporting unit (e.g. "spring", "fall", "latefall",
+                "winter")</li>
+            <li><strong>LFAR_markers_present:</strong> True if the markers diagnostic for Late Fall / Fall distinction
+                are present</li>
+            <li><strong>collection:</strong> Specific baseline population assignment within the reporting unit</li>
+        </ul>
+
+        <div class="print-break"></div>
+
+        <h2 class="text-2xl font-semibold mb-4 text-gray-800">2. Final Call Decision Logic</h2>
+        <p class="mb-4">The logic is evaluated hierarchically. As soon as a condition is satisfied, the respective
+            <code>final_call</code> is assigned and evaluated no further within this pass.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th class="w-1/4">Check Phase</th>
+                    <th class="w-1/2">Conditions Required</th>
+                    <th class="w-1/4">Preliminary final_call</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="bg-gray-100">
+                    <td colspan="3" class="font-semibold text-gray-700">High Missing GSI Data</td>
+                </tr>
+                <tr>
+                    <td rowspan="3"></td>
+                    <td><code>fraction_missing &gt; gsi_missing_threshold</code> + <code>RoSA == "Late"</code></td>
+                    <td class="font-bold">Fall / Late Fall</td>
+                </tr>
+                <tr>
+                    <td><code>fraction_missing &gt; gsi_missing_threshold</code> + <code>RoSA == "Early"</code></td>
+                    <td class="font-bold">Spring / Winter</td>
+                </tr>
+                <tr>
+                    <td><code>fraction_missing &gt; gsi_missing_threshold</code></td>
+                    <td class="font-bold text-gray-500">Missing Data</td>
+                </tr>
+
+                <tr class="bg-gray-100">
+                    <td colspan="3" class="font-semibold text-gray-700">Low Confidence Assignment</td>
+                </tr>
+                <tr>
+                    <td rowspan="3"></td>
+                    <td><code>Prob_repunit &lt; PofZ_threshold</code> + <code>RoSA == "Early"</code></td>
+                    <td class="font-bold">Mixed Spring</td>
+                </tr>
+                <tr>
+                    <td><code>Prob_repunit &lt; PofZ_threshold</code> + <code>RoSA == "Late"</code></td>
+                    <td class="font-bold">Mixed Fall / Late Fall</td>
+                </tr>
+                <tr>
+                    <td><code>Prob_repunit &lt; PofZ_threshold</code></td>
+                    <td class="font-bold">Mixed</td>
+                </tr>
+
+                <tr class="bg-gray-100">
+                    <td colspan="3" class="font-semibold text-gray-700">Confident Assignment Overrides</td>
+                </tr>
+                <tr>
+                    <td rowspan="3"></td>
+                    <td><code>RoSA == "Early"</code> + <code>repunit</code> is "fall" or "latefall"</td>
+                    <td class="font-bold text-green-700">Spring</td>
+                </tr>
+                <tr>
+                    <td><code>RoSA == "Late"</code> + <code>repunit == "spring"</code></td>
+                    <td class="font-bold text-orange-600">Fall</td>
+                </tr>
+                <tr>
+                    <td><code>fraction_missing &lt; gsi_missing_threshold</code></td>
+                    <td class="font-bold">[Capitalized repunit]</td>
+                </tr>
+
+                <tr class="bg-gray-100">
+                    <td colspan="3" class="font-semibold text-gray-700">Catch-All</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>None of the above</td>
+                    <td class="font-bold text-red-600">Assignment Error</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 class="text-xl font-semibold mb-2">2.1 Post-Processing Overrides</h3>
+        <div class="bg-yellow-50 border border-yellow-200 p-4 rounded mb-8">
+            <p class="mb-2">After determining the preliminary call, two additional filters run checking for explicit
+                marker findings. This will override the decision above:</p>
+            <ol class="list-decimal pl-5 space-y-2">
+                <li><strong>Species Override:</strong><br>
+                    <strong>IF</strong> <code>Species == "non-Chinook"</code> ➔ <strong>THEN</strong>
+                    <code>final_call</code> becomes <strong>non-Chinook</strong>
+                </li>
+                <li><strong>Missing LFAR Markers Override:</strong><br>
+                    <strong>IF</strong> <code>LFAR_markers_present == FALSE</code> <strong>AND</strong>
+                    <code>final_call</code> is currently "Fall" or "Latefall" ➔ <strong>THEN</strong>
+                    <code>final_call</code> gets consolidated to <strong>Fall / Late Fall</strong>
+                </li>
+            </ol>
+        </div>
+
+        <div class="print-break"></div>
+
+        <h2 class="text-2xl font-semibold mb-4 text-gray-800">3. Tributary Decision Logic</h2>
+        <p class="mb-4">The <code>tributary</code> call is evaluated independently from <code>final_call</code> using a
+            distinct (but related) set of criteria.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Scenario</th>
+                    <th>Condition</th>
+                    <th>tributary Outcome</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="font-medium">Feather River-Lineage Spring</td>
+                    <td>
+                        <code>RoSA == "Early"</code> <strong>AND</strong><br>
+                        <code>repunit</code> is "fall" or "latefall" <strong>AND</strong><br>
+                        <code>Prob_repunit &gt;= PofZ_threshold</code> <strong>AND</strong><br>
+                        <code>fraction_missing &lt; gsi_missing_threshold</code>
+                    </td>
+                    <td class="font-bold text-green-700">Feather River-lineage Spring</td>
+                </tr>
+                <tr>
+                    <td class="font-medium">Voided Late Run Spring Assigns</td>
+                    <td>
+                        <code>RoSA == "Late"</code> <strong>AND</strong><br>
+                        <code>repunit == "spring"</code> <strong>AND</strong><br>
+                        <code>Prob_repunit &gt; PofZ_threshold</code>
+                    </td>
+                    <td class="font-bold text-gray-500">NA (Empty)</td>
+                </tr>
+                <tr>
+                    <td class="font-medium">Standard Spring Run Collection</td>
+                    <td><code>repunit == "spring"</code></td>
+                    <td class="font-bold">[collection name]</td>
+                </tr>
+                <tr>
+                    <td class="font-medium">Default Fallback</td>
+                    <td>Any other combination</td>
+                    <td class="font-bold text-gray-500">NA (Empty)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Mermaid Diagram Section -->
+        <div class="print-break"></div>
+        <h2 class="text-2xl font-semibold mb-6 text-gray-800">4. Flowchart Summary</h2>
+        <div class="border rounded-lg p-4 bg-white shadow-sm flex justify-center w-full">
+            <div class="mermaid">
+                flowchart TD
+                Start([Evaluate Sample]) --> MissingGSI{Is fraction_missing > gsi_missing_threshold?}
+
+                %% Missing Data Branch
+                MissingGSI -- Yes --> ROSA_Miss{What is RoSA?}
+                ROSA_Miss -- "Late" --> MissLate[Fall / Late Fall]
+                ROSA_Miss -- "Early" --> MissEarly[Spring / Winter]
+                ROSA_Miss -- "Other" --> MissOther[Missing Data]
+
+                %% Low Confidence Branch
+                MissingGSI -- No --> Conf{Is Prob_repunit < PofZ_threshold?} Conf -- Yes --> ROSA_LowConf{What is RoSA?}
+                    ROSA_LowConf -- "Early" --> LowEarly[Mixed Spring]
+                    ROSA_LowConf -- "Late" --> LowLate[Mixed Fall / Late Fall]
+                    ROSA_LowConf -- "Other" --> LowOther[Mixed]
+
+                    %% Confident Branch
+                    Conf -- No --> ConfOver{Override Conditions?}
+                    ConfOver -- "RoSA=Early & GSI=fall/latefall" --> OvEarly[Spring]
+                    ConfOver -- "RoSA=Late & GSI=spring" --> OvLate[Fall]
+                    ConfOver -- "None (Default)" --> RepUnitCall[RepUnit Title Case]
+
+                    %% Post Processing Overrides
+                    MissLate & MissEarly & MissOther & LowEarly & LowLate & LowOther & OvEarly & OvLate & RepUnitCall
+                    --> Pre[Preliminary Final Call]
+
+                    Pre --> Species{Species == non-Chinook?}
+                    Species -- Yes --> NonChin[final_call: non-Chinook]
+                    Species -- No --> LFAR{LFAR_markers_present == FALSE<br>& Call is Fall/Latefall?}
+
+                    LFAR -- Yes --> Consolidate[final_call: Fall / Late Fall]
+                    LFAR -- No --> FinalMatch[Keep Preliminary Call]
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Mermaid JS to automatically render the code block above -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+
+</html>

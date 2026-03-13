@@ -70,6 +70,13 @@ reshape_paired_genotypes <- function(geno_df, chunk_size = 500) {
   bind_rows(result_list)
 }
 
+get_loci <- function(df) {
+  if (is.null(df)) return(NULL)
+  # Strictly only look at columns ending in .1 or .2
+  loci_cols <- grep("\\.[12]$", names(df), value = TRUE)
+  unique(gsub("\\.[12]$", "", loci_cols))
+}
+
 # Load arguments
 args <- commandArgs(trailingOnly = TRUE)
 unknown_genotypes_raw <- args[1] %>%
@@ -117,13 +124,6 @@ loci_removal_regex <- Sys.getenv("LOCI_REMOVAL_REGEX")
 if (loci_removal_regex == "") {
     loci_removal_regex <- "^$"
     cat("No loci removal regex specified - no loci will be removed\n")
-}
-
-# Find common loci across datasets
-get_loci <- function(df) {
-  if (is.null(df)) return(NULL)
-  loci_cols <- setdiff(names(df), "SAMPLE_ID")
-  unique(gsub("\\.[12]$", "", loci_cols))
 }
 
 l_unk <- get_loci(unknown_genotypes_raw)

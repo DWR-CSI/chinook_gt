@@ -119,6 +119,51 @@ if (loci_removal_regex == "") {
     cat("No loci removal regex specified - no loci will be removed\n")
 }
 
+# Find common loci across datasets
+get_loci <- function(df) {
+  if (is.null(df)) return(NULL)
+  loci_cols <- setdiff(names(df), "SAMPLE_ID")
+  unique(gsub("\\.[12]$", "", loci_cols))
+}
+
+l_unk <- get_loci(unknown_genotypes_raw)
+l_par <- get_loci(parents_genotypes_raw)
+l_ext <- if (use_extra_genos) get_loci(extra_genos_wide) else NULL
+
+common_loci <- intersect(l_unk, l_par)
+
+dropped_unk <- setdiff(l_unk, common_loci)
+dropped_par <- setdiff(l_par, common_loci)
+dropped_ext <- setdiff(l_ext, common_loci)
+extra_missing <- if (!is.null(l_ext)) setdiff(common_loci, l_ext) else character(0)
+
+total_dropped <- length(dropped_unk) + length(dropped_par) + length(dropped_ext)
+total_missing <- length(extra_missing)
+
+if(total_dropped > 0 || total_missing > 0) {
+  cat("WARNING: Loci Mismatch Detected!\n")
+  if (length(dropped_unk) > 0) cat("WARNING: Dropped", length(dropped_unk), "loci unique to Unknown Genotypes.\n")
+  if (length(dropped_par) > 0) cat("WARNING: Dropped", length(dropped_par), "loci unique to Parent Genotypes.\n")
+  if (length(dropped_ext) > 0) cat("WARNING: Dropped", length(dropped_ext), "loci unique to Extra Genotypes.\n")
+  if (length(extra_missing) > 0) {
+    cat("WARNING: Extra Genotypes is missing", length(extra_missing), "core loci.\n")
+    cat("WARNING: These core loci will be retained, but Extra will not contribute to their frequencies.\n")
+  }
+}
+
+filter_common_loci <- function(df, common) {
+  if (is.null(df)) return(NULL)
+  cols_to_keep <- c("SAMPLE_ID", paste0(common, ".1"), paste0(common, ".2"))
+  df %>% select(any_of(cols_to_keep))
+}
+
+unknown_genotypes_raw <- filter_common_loci(unknown_genotypes_raw, common_loci)
+parents_genotypes_raw <- filter_common_loci(parents_genotypes_raw, common_loci)
+if (use_extra_genos) {
+  extra_genos_wide <- filter_common_loci(extra_genos_wide, common_loci)
+  extra_genos_long <- reshape_paired_genotypes(extra_genos_wide)
+}
+
 # Process genotypes
 combined_genotypes_raw <- bind_rows(
   unknown_genotypes_raw,

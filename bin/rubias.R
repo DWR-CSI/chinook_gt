@@ -7,12 +7,8 @@ library(rubias)
 # Functions ------------
 clean_sample_name <- function(x) {
   x %>%
-    #str_remove("_S\\d+(?:_|$)") %>%  # Remove _S123 or _S123_
-    #str_remove("_R\\d+(?:_|$)") %>%  # Remove _R1 or _R1_
-    #str_remove("_L\\d+(?:_|$)") %>%  # Remove _L001 or _L001_
-    #str_remove("_$") %>%            # Clean up any leftover trailing _
-    str_remove("_.*") %>%            # Remove first _ and all following text
-    str_replace_all("-", "_")       # Replace dashes with underscores
+    str_remove("_S\\d+.*") %>%  # Remove _S followed by any number and everything following it
+    str_replace_all("-", "_")    # Replace any dashes with underscores (if any)
 }
 
 all_na_cols <- function(df) {

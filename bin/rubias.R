@@ -381,7 +381,8 @@ repunit_calls <- all_full_mix_results %>%
     final_call = case_when(
       (fraction_missing > gsi_missing_threshold) & (RoSA == "Late") ~ "Fall / Late Fall",
       (fraction_missing > gsi_missing_threshold) & (RoSA == "Early") ~ "Spring / Winter",
-      fraction_missing > gsi_missing_threshold ~ "Missing Data",
+      fraction_missing > gsi_missing_threshold ~ "Unassigned: Missing data",
+      RoSA == "Uncertain" ~ "Unassigned: RoSA missing",
       (Prob_repunit < PofZ_threshold) & (RoSA == "Early") ~ "Mixed Spring",
       (Prob_repunit < PofZ_threshold) & (RoSA == "Late") ~ "Mixed Fall / Late Fall",
       Prob_repunit < PofZ_threshold ~ "Mixed",
@@ -407,13 +408,13 @@ raw_repunit_probs <- all_full_mix_results %>%
     tributary = case_when(
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) & (Prob_repunit >= PofZ_threshold) & ((n_miss_loci / (n_miss_loci + n_non_miss_loci)) < gsi_missing_threshold) ~ "Feather River-lineage Spring",
       (RoSA == "Late") & (repunit == "spring") & (Prob_repunit > PofZ_threshold) ~ NA_character_,
-      repunit == "spring" ~ collection,
+      (RoSA != "Uncertain") & (repunit == "spring") ~ collection,
       TRUE ~ NA_character_
     ),
     PofZ = case_when(
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ NA_real_,
       (RoSA == "Late") & (repunit == "spring") ~ NA_real_,
-      repunit == "spring" ~ PofZ,
+      (RoSA != "Uncertain") & (repunit == "spring") ~ PofZ,
       TRUE ~ NA_real_
     )
   )
@@ -430,8 +431,8 @@ mix_results_wide <- all_full_mix_results %>%
   )) %>% # Replace NA with 0
   mutate(across(
     matches("spring|winter|fall|late"),
-    ~ if_else(final_call == "Missing Data", NA_real_, .)
-  )) %>% # Replace PofZ with NA if final call is "Missing Data"
+    ~ if_else(final_call %in% c("Unassigned: Missing data", "Unassigned: RoSA missing", "Missing Data"), NA_real_, .)
+  )) %>% # Replace PofZ with NA if final call is Unassigned
   mutate(across(
     matches("spring|winter|fall|late"),
     ~ round(., digits = 2)
@@ -439,7 +440,7 @@ mix_results_wide <- all_full_mix_results %>%
   mutate(
     GSI_perc_missing = round(fraction_missing * 100, digits = 1),
     ots28_missing = round(ots28_missing, digits = 1),
-    probability = if_else((final_call != "Missing Data"), round(probability, digits = 3), NA_real_)
+    probability = if_else((final_call != "Unassigned: Missing data") & (final_call != "Unassigned: RoSA missing"), round(probability, digits = 3), NA_real_)
   ) %>%
   select(
     SampleID = indiv,
@@ -456,8 +457,8 @@ mix_results_wide <- all_full_mix_results %>%
   ) %>%
   left_join(raw_repunit_probs %>% select(SampleID = indiv, tributary, trib_PofZ = PofZ), by = "SampleID") %>%
   mutate(
-    trib_PofZ = if_else(!(final_call %in% c("Missing Data", "Fall / Late Fall", "Spring / Winter")), round(trib_PofZ, digits = 3), NA_real_),
-    final_call = str_to_title(final_call)
+    trib_PofZ = if_else(!(final_call %in% c("Unassigned: Missing data", "Unassigned: RoSA missing", "Fall / Late Fall", "Spring / Winter")), round(trib_PofZ, digits = 3), NA_real_),
+    final_call = str_replace(str_to_title(final_call), "Rosa", "RoSA")
   )
 
 mix_results_wide_w_extras <- mix_results_wide %>%

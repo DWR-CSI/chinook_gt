@@ -39,7 +39,7 @@ process FLASH2 {
         zcat ${sample_id}.extendedFrags.fastq.gz | awk -v sid="${sample_id}" '
         NR % 4 == 2 {
             total++
-            if (length($0) <= 50) short++
+            if (length(\$0) <= 50) short++
         }
         END {
             pct = (total > 0) ? (short / total) * 100 : 0

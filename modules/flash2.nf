@@ -46,3 +46,5 @@ process FLASH2 {
             printf "%s\t%d\t%d\t%.2f\n", sid, total, short, pct
         }'
     } > ${sample_id}.counts.tsv
+    """
+}

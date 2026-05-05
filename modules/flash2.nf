@@ -8,6 +8,7 @@ process FLASH2 {
     input:
     tuple val(sample_id), path(reads)
     val min_overlap
+    val min_outie_overlap
     val max_overlap
     
     output:
@@ -21,6 +22,7 @@ process FLASH2 {
     """
     flash2 \
         -m ${min_overlap} \
+        --min-overlap-outie ${min_outie_overlap} \
         -M ${max_overlap} \
         -O \
         -z \

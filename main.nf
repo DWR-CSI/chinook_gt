@@ -351,7 +351,7 @@ workflow {
     
     MERGE_DIMER_COUNTS(
         FLASH2.out.counts
-            .map { sid, file -> file }
+            .map { sid, file -> file.toString() }
             .collect()
     )
     

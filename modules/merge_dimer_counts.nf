@@ -12,11 +12,14 @@ process MERGE_DIMER_COUNTS {
 
     script:
     """
-    # write header once
-    head -n 1 \$(ls ${count_files[0]}) > combined_dimer_counts.tsv
+    set -euo pipefail
 
-    # append all rows (skip headers)
-    for f in ${count_files}; do
+    # write header from first file
+    first=\$(ls *.counts.tsv | head -n 1)
+    head -n 1 \$first > combined_dimer_counts.tsv
+
+    # append all files
+    for f in *.counts.tsv; do
         tail -n +2 \$f >> combined_dimer_counts.tsv
     done
     """

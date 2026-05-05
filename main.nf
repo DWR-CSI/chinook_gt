@@ -353,7 +353,7 @@ workflow {
         .collectFile(
             name: "dimer_counts.tsv",
             keepHeader: true,
-            skipLines: 1,
+            skip: 1,
             storeDir: "${params.outdir}/${params.project}/dimer_counts"
         )
     

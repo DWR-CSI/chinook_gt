@@ -37,14 +37,12 @@ process FLASH2 {
     {
         echo -e "sample_id\ttotal_reads\tdimer_reads\tpercent_dimer"
         zcat ${sample_id}.extendedFrags.fastq.gz | awk -v sid="${sample_id}" '
-        NR%4==2 {
+        NR % 4 == 2 {
             total++
-            if (length(\$0) <= 50) short++
+            if (length($0) <= 50) short++
         }
         END {
-            pct = (total>0) ? (short/total)*100 : 0
+            pct = (total > 0) ? (short / total) * 100 : 0
             printf "%s\t%d\t%d\t%.2f\n", sid, total, short, pct
         }'
     } > ${sample_id}.counts.tsv
-    """
-}

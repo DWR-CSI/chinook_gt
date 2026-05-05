@@ -346,7 +346,7 @@ workflow {
     
     FASTQC(ch_input_fastq) // FASTQC all input files
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)
-    FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.max_overlap)
+    FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
     
     // Process single-end reads
     ch_reads_branched.single

@@ -99,6 +99,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
 include { FASTQC } from './modules/fastqc'
 include { TRIMMOMATIC; TRIMMOMATIC_SINGLE } from './modules/trimmomatic'
 include { FLASH2 } from './modules/flash2'
+include { DIMER_COUNTS } from './modules/dimer_counts'
 include { BWA_MEM } from './modules/bwa_mem'
 include { SAMTOOLS } from './modules/samtools'
 include { MULTIQC } from './modules/multiqc'

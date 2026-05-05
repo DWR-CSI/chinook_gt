@@ -352,7 +352,7 @@ workflow {
     FLASH2.out.counts
         .collectFile(
             name: "dimer_counts.tsv",
-            header: true
+            keepHeader: true
         )
     
     // Process single-end reads

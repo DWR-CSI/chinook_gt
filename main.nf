@@ -351,10 +351,10 @@ workflow {
     // Collect FLASH2 counts into a single summary table
     FLASH2.out.counts
         .collectFile(
-            name: "flash2_summary_table.tsv",
+            name: "dimer_counts.tsv",
             keepHeader: true,
             skipLines: 1,
-            storeDir: "${params.outdir}/${params.project}/summary"
+            storeDir: "${params.outdir}/${params.project}/dimer_counts"
         )
     
     // Process single-end reads

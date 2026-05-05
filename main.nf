@@ -347,6 +347,15 @@ workflow {
     FASTQC(ch_input_fastq) // FASTQC all input files
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)
     FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
+
+    // Combine total/dimer counts into single output file
+    FLASH2.out.counts
+        .map { sid, file -> file }
+        .collectFile(
+            name: "combined_dimer_counts.tsv",
+            newLine: true,
+            storeDir: "${params.outdir}/${params.project}/dimer_counts"
+        )
     
     // Process single-end reads
     ch_reads_branched.single

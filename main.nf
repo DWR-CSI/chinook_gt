@@ -347,6 +347,15 @@ workflow {
     FASTQC(ch_input_fastq) // FASTQC all input files
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)
     FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
+
+    // Collect FLASH2 counts into a single summary table
+    FLASH2.out.counts
+        .collectFile(
+            name: "flash2_summary_table.tsv",
+            keepHeader: true,
+            skipLines: 1,
+            storeDir: "${params.outdir}/${params.project}/summary"
+        )
     
     // Process single-end reads
     ch_reads_branched.single

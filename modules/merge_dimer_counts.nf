@@ -2,6 +2,8 @@ process MERGE_DIMER_COUNTS {
     tag "Merge dimer counts"
     label 'process_single'
 
+    container 'ubuntu:22.04'
+
     publishDir "${params.outdir}/${params.project}/dimer_counts", mode: 'copy'
 
     input:

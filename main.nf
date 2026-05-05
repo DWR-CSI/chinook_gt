@@ -349,7 +349,9 @@ workflow {
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)
     FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
     
-    MERGE_DIMER_COUNTS( FLASH2.out.counts )
+    counts_ch = FLASH2.out.counts.map { sid, file -> file }
+
+    MERGE_DIMER_COUNTS(counts_ch.collect())
     
     // Process single-end reads
     ch_reads_branched.single

@@ -349,6 +349,7 @@ workflow {
     DIMER_ANALYSIS(ch_reads_branched.paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
 
     merged_counts = DIMER_ANALYSIS.out.counts
+        .map { sample_id, file -> file.text }
         .collectFile(
             name: 'dimer_counts.tsv',
             storeDir: "${params.outdir}/${params.project}/dimers",

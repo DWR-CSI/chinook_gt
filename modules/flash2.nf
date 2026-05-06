@@ -15,7 +15,6 @@ process FLASH2 {
     tuple val(sample_id), path("${sample_id}.extendedFrags.fastq.gz"), emit: merged
     tuple val(sample_id), path("${sample_id}.notCombined_*.fastq.gz"), emit: unmerged
     path "${sample_id}.flash2.log", emit: log
-    path "${sample_id}.counts.tsv", emit: counts
     
     script:
     def input_1 = reads[0]

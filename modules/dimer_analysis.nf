@@ -10,7 +10,7 @@ process DIMER_ANALYSIS {
     val max_overlap
 
     output:
-    path "${sample_id}.counts.tsv", emit: counts
+    tuple val(sample_id), path("counts.tmp"), emit: counts
 
     script:
     def input_1 = reads[0]
@@ -37,7 +37,7 @@ process DIMER_ANALYSIS {
             pct = (total > 0) ? (short / total) * 100 : 0
             printf "%s\\t%d\\t%d\\t%.2f\\n", sid, total, short, pct
         }
-    '
+    ' > counts.tmp
 
     rm -f ${sample_id}.extendedFrags.fastq.gz \
           ${sample_id}.notCombined_*.fastq.gz

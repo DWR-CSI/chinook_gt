@@ -347,6 +347,15 @@ workflow {
     
     FASTQC(ch_input_fastq) // FASTQC all input files
     DIMER_ANALYSIS(ch_reads_branched.paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
+
+    merged_counts = DIMER_ANALYSIS.out.counts
+        .collectFile(
+            name: 'dimer_counts.tsv',
+            storeDir: "${params.outdir}/${params.project}/dimers",
+            header: 'sample_id\ttotal_reads\tdimer_reads\tpercent_dimer',
+            newLine: true
+        )
+
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)
     FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
     

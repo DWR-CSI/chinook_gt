@@ -32,6 +32,9 @@ process DIMER_ANALYSIS {
     # Compute per-sample metrics
     zcat ${sample_id}.extendedFrags.fastq.gz | \
     awk -v sid="${sample_id}" '
+        BEGIN {
+            print "sample_id\ttotal_merged\tdimer_count\tdimer_percent"
+        }
         NR % 4 == 2 {
             total++
             if (length(\$0) <= 50) short++

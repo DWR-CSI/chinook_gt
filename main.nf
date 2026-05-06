@@ -350,7 +350,8 @@ workflow {
 
     merged_counts = DIMER_ANALYSIS.out.counts
         .collectFile(
-            name: 'dimer_counts.tsv',
+            name: 'dimer_counts_mqc.tsv',
+            keepHeader: true,
             storeDir: "${params.outdir}/${params.project}/dimers/summary"
         )
 
@@ -654,6 +655,7 @@ workflow {
     ch_multiqc_files = ch_multiqc_files.mix(FLASH2.out.log)
     //ch_multiqc_files = ch_multiqc_files.mix(BWA_MEM.out.log)
     ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect{it[2]})
+    ch_multiqc_files = ch_multiqc_files.mix(merged_counts)
     //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
     MULTIQC(ch_multiqc_files.collect())
     

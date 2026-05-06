@@ -98,6 +98,10 @@ def resolveReferences(params) {
     return reference_files
 }
 
+
+// Set default values for thresholds if not specified in configs
+
+
 workflow {
 // Validate required parameters
 if (!params.outdir) {
@@ -106,37 +110,6 @@ if (!params.outdir) {
 if (!params.project) {
     error "ERROR: --project parameter is required. Please specify a project name."
 }
-
-// Set default values for thresholds if not specified in configs
-params.fullgenome_ref_name = params.fullgenome_ref_name ?: 'Chinook_FullPanel_VGLL3Six6LFARWRAP'
-params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
-params.full_genome_mount_path = params.full_genome_mount_path ?: null
-params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
-params.pofz_threshold = params.pofz_threshold ?: 0.8
-params.concat_all_reads = params.concat_all_reads ?: false
-params.use_sequoia = params.use_sequoia ?: false
-params.sequoia_mode = params.sequoia_mode ?: 'par'
-params.sequoia_missing_threshold = params.sequoia_missing_threshold ?: 0.5
-params.species_max_repro_age = params.species_max_repro_age ?: 6
-params.species_min_repro_age = params.species_min_repro_age ?: 1
-params.haplotype_depth = params.haplotype_depth ?: 4
-params.total_depth = params.total_depth ?: 8
-params.allele_balance = params.allele_balance ?: 0.35
-params.loci_to_remove = params.loci_to_remove ?: ""
-params.male_sexid_threshold = params.male_sexid_threshold ?: 0.01
-params.female_sexid_threshold = params.female_sexid_threshold ?: 0.002
-params.sexid_min_reads = params.sexid_min_reads ?: 10000
-params.offspring_max_age = params.offspring_max_age ?: 6
-params.offspring_birthyear = params.offspring_birthyear ?: 'unknown'
-params.offspring_maxBY = params.offspring_maxBY ?: params.offspring_birthyear
-params.offspring_minBY = params.offspring_minBY ?: ((params.offspring_maxBY) ? (params.offspring_maxBY - params.offspring_max_age) : null)
-params.use_CKMR = params.use_CKMR ?: false
-params.CKMR_logl_threshold = params.CKMR_logl_threshold ?: 6.9
-params.CKMR_min_loci = params.CKMR_min_loci ?: 90
-params.CKMR_parent_geno_input = params.CKMR_parent_geno_input ?: "$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"
-params.CKMR_extra_genos_allele_freqs = params.CKMR_extra_genos_allele_freqs ?: "$projectDir/examples/PBT/JPE2022-2024_geno_wide.csv"
-params.fullgenome_region_file = params.fullgenome_region_file ?: "$projectDir/data/regions/Chinook_FullPanel_VGLL3Six6LFARWRAP-Otsh_v1.0.txt"
-params.fullgenome_chunk_size = params.fullgenome_chunk_size ?: 30
 
 // Validate numeric threshold ranges
 if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {

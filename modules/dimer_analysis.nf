@@ -25,8 +25,7 @@ process DIMER_ANALYSIS {
         -z \
         -o ${sample_id} \
         -d . \
-        ${input_1} ${input_2} \
-        > ${sample_id}.flash2.log 2>&1
+        ${input_1} ${input_2}
 
     # compute metrics and write ONE LINE ONLY (no header)
     zcat ${sample_id}.extendedFrags.fastq.gz | \

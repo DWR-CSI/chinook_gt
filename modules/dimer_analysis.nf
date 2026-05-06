@@ -28,7 +28,7 @@ process DIMER_ANALYSIS {
         ${input_1} ${input_2} \
         > ${sample_id}.flash2.log 2>&1
 
-	# compute metrics and write ONE LINE ONLY (no header)
+	//compute metrics and write ONE LINE ONLY (no header)
     zcat ${sample_id}.extendedFrags.fastq.gz | \
     awk -v sid="${sample_id}" '
         NR % 4 == 2 {

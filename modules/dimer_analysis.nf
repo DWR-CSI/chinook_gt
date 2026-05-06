@@ -37,10 +37,8 @@ process DIMER_ANALYSIS {
         zcat ${sample_id}.extendedFrags.fastq.gz | awk -v sid="${sample_id}" 'BEGIN{OFS="\\t"} NR % 4 == 2 {total++; if (length(\$0) <= 50) short++} END {pct = (total > 0) ? (short / total) * 100 : 0; printf "%s\\t%d\\t%d\\t%.2f\\n", sid, total, short, pct}'
     } > ${sample_id}.counts.tsv
 
+	rm -f ${sample_id}.extendedFrags.fastq.gz \
+      	${sample_id}.notCombined_*.fastq.gz
+
     """
-	
-	afterScript:
-	"""	
-	rm -f ${sample_id}.extendedFrags.fastq.gz ${sample_id}.notCombined_*.fastq.gz || true
-	"""
 }

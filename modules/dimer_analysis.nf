@@ -1,4 +1,4 @@
-process DIMER_ANALYSIS{
+process DIMER_ANALYSIS {
     tag "Dimer analysis on ${sample_id}"
     label 'process_small'
     container 'quay.io/biocontainers/flash2:2.2.00--ha92aebf_1'

@@ -5,7 +5,7 @@ process DIMER_ANALYSIS {
     container 'quay.io/biocontainers/flash2:2.2.00--ha92aebf_1'
 
     // isolate per-sample outputs in their own folder
-    publishDir "${params.outdir}/${params.project}/dimers/per_sample",
+    publishDir "${params.outdir}/${params.project}/dimers",
         mode: 'copy',
         pattern: "*.counts.tsv"
 

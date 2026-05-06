@@ -351,7 +351,7 @@ workflow {
     merged_counts = DIMER_ANALYSIS.out.counts
         .collectFile(
             name: 'dimer_counts.tsv',
-            storeDir: "${params.outdir}/${params.project}/dimers"
+            storeDir: "${params.outdir}/${params.project}/dimers/summary"
         )
 
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)

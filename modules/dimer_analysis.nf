@@ -4,11 +4,6 @@ process DIMER_ANALYSIS {
     label 'process_small'
     container 'quay.io/biocontainers/flash2:2.2.00--ha92aebf_1'
 
-    // isolate per-sample outputs in their own folder
-    publishDir "${params.outdir}/${params.project}/dimers",
-        mode: 'copy',
-        pattern: "*.counts.tsv"
-
     input:
     tuple val(sample_id), val(read_type), path(reads)
     val min_overlap

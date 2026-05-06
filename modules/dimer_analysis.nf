@@ -6,7 +6,7 @@ process DIMER_ANALYSIS {
     publishDir "${params.outdir}/${params.project}/dimers", mode: 'copy'
 
     input:
-    tuple val(sample_id), path(reads)
+    tuple val(sample_id), val(read_type), path(reads)
     val min_overlap
     val min_outie_overlap
     val max_overlap

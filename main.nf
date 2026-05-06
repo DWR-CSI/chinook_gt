@@ -352,8 +352,7 @@ workflow {
         .map { sample_id, file -> file.text }
         .collectFile(
             name: 'dimer_counts.tsv',
-            storeDir: "${params.outdir}/${params.project}/dimers",
-            newLine: true
+            storeDir: "${params.outdir}/${params.project}/dimers"
         )
 
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)

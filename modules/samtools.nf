@@ -5,8 +5,8 @@ process SAMTOOLS {
     'https://depot.galaxyproject.org/singularity/samtools:1.20--h50ea8bc_1':
     'quay.io/biocontainers/samtools:1.20--h50ea8bc_1' }"
 
-    publishDir "${params.outdir}/${params.project}/samtools/${reference}", mode: 'copy', pattern: '*_sorted.bam*'
-    publishDir "${params.outdir}/${params.project}/samtools/idxstats/${reference}", mode: 'copy', pattern: '*_idxstats.txt'
+    publishDir "${params.outdir}/${params.project}/samtools", mode: 'copy', pattern: '*_sorted.bam*', saveAs: { filename -> "${reference}/$filename" }
+    publishDir "${params.outdir}/${params.project}/samtools/idxstats", mode: 'copy', pattern: '*_idxstats.txt', saveAs: { filename -> "${reference}/$filename" }
 
     input:
     tuple val(sample_id), val(reference), path(aligned_sam)

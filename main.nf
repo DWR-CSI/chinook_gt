@@ -15,6 +15,90 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+
+// Import modules
+include { FASTQC } from './modules/fastqc'
+include { TRIMMOMATIC; TRIMMOMATIC_SINGLE } from './modules/trimmomatic'
+include { FLASH2 } from './modules/flash2'
+include { BWA_MEM } from './modules/bwa_mem'
+include { SAMTOOLS } from './modules/samtools'
+include { MULTIQC } from './modules/multiqc'
+include { INDEX_REFERENCE } from './modules/index_reference'
+include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
+include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS} from './modules/microhaplot.nf'
+include { RUN_RUBIAS } from './modules/rubias.nf'
+include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
+include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
+include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
+include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
+include { CONCAT_READS } from './modules/concat_reads.nf'
+include { RUN_SEQUOIA } from './modules/sequoia.nf'
+include { CKMR_PO } from './modules/CKMRsim.nf'
+include { CKMRSIM_RUBIAS_SUMMARY } from './modules/summary.nf'
+// Full genome mapping modules (for LFAR, WRAP, VGLL3SIX6 loci)
+include { DOWNLOAD_AND_INDEX_GENOME } from './modules/fullgenome/download_genome'
+include { MAKE_THINNED_GENOME; MAKE_THINNED_GENOME_MOUNT } from './modules/fullgenome/make_thinned_genome'
+include { MAP_TO_FULL_GENOME; MAP_TO_FULL_GENOME_MOUNT } from './modules/fullgenome/map_fullgenome'
+include { EXTRACT_READS_FROM_REGIONS } from './modules/fullgenome/extract_regions'
+include { BAM_TO_FASTQ } from './modules/fullgenome/bam_to_fastq'
+include { REMAP_TO_THINNED_GENOME } from './modules/fullgenome/remap_thinned'
+
+// Functions
+
+def resolveReferences(params) {
+    def reference_files = []
+    
+    if (params.reference) {
+        // User provided explicit reference files
+        if (params.reference instanceof List) {
+            reference_files = params.reference
+        } else {
+            reference_files = [params.reference]
+        }
+        log.info "Using user-specified reference file(s): ${reference_files}"
+    } else if (params.panel) {
+        // Handle panel-based reference selection
+        def panel_lower = params.panel.toLowerCase()
+        if (panel_lower == 'transition') {
+                reference_files = [
+                    "$projectDir/data/targets/transition/transition.fasta",
+                    //"$projectDir/data/targets/LFAR/LFAR.fasta", // Commented out. Not used in DWR primers?
+                    "$projectDir/data/targets/WRAP/WRAP.fasta"
+                ]
+                log.info "Using transition panel references"
+        } else if (panel_lower == 'full') {
+                reference_files = [
+                    "$projectDir/data/targets/full/full.fna"//,
+                    //"$projectDir/data/targets/full_VGLL3Six6LFARWRAP/VGLL3Six6LFARWRAP.fna"
+                ]
+                log.info "Using full panel reference"
+        } else {
+                error "Unrecognized panel type: ${params.panel}. Supported values are 'transition' or 'full'"
+        }
+        
+        // Verify all reference files exist
+        reference_files.each { ref ->
+            if (!file(ref).exists()) {
+                error "Reference file not found: ${ref}"
+            }
+        }
+        
+        // Verify corresponding VCF files exist
+        reference_files.each { ref ->
+            def basename = file(ref).simpleName
+            def vcf = file("${projectDir}/data/VCFs/${basename}.vcf")
+            if (!vcf.exists()) {
+                error "VCF file not found for reference: ${basename}. Expected: ${vcf}"
+            }
+        }
+    } else {
+        error "Neither reference nor panel type specified. Please provide either --reference or --panel (transition/full)"
+    }
+    
+    return reference_files
+}
+
+workflow {
 // Validate required parameters
 if (!params.outdir) {
     error "ERROR: --outdir parameter is required. Please specify an output directory."
@@ -94,92 +178,6 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         error "ERROR: offspring_maxBY is required when use_sequoia is true"
     }
 }
-
-// Import modules
-include { FASTQC } from './modules/fastqc'
-include { TRIMMOMATIC; TRIMMOMATIC_SINGLE } from './modules/trimmomatic'
-include { FLASH2 } from './modules/flash2'
-include { BWA_MEM } from './modules/bwa_mem'
-include { SAMTOOLS } from './modules/samtools'
-include { MULTIQC } from './modules/multiqc'
-include { INDEX_REFERENCE } from './modules/index_reference'
-include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
-include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS} from './modules/microhaplot.nf'
-include { RUN_RUBIAS } from './modules/rubias.nf'
-include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
-include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
-include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
-include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
-include { CONCAT_READS } from './modules/concat_reads.nf'
-include { RUN_SEQUOIA } from './modules/sequoia.nf'
-include { CKMR_PO } from './modules/CKMRsim.nf'
-include { CKMRSIM_RUBIAS_SUMMARY } from './modules/summary.nf'
-// Full genome mapping modules (for LFAR, WRAP, VGLL3SIX6 loci)
-include { DOWNLOAD_AND_INDEX_GENOME } from './modules/fullgenome/download_genome'
-include { MAKE_THINNED_GENOME; MAKE_THINNED_GENOME_MOUNT } from './modules/fullgenome/make_thinned_genome'
-include { MAP_TO_FULL_GENOME; MAP_TO_FULL_GENOME_MOUNT } from './modules/fullgenome/map_fullgenome'
-include { EXTRACT_READS_FROM_REGIONS } from './modules/fullgenome/extract_regions'
-include { BAM_TO_FASTQ } from './modules/fullgenome/bam_to_fastq'
-include { REMAP_TO_THINNED_GENOME } from './modules/fullgenome/remap_thinned'
-
-// Functions
-
-def resolveReferences(params) {
-    def reference_files = []
-    
-    if (params.reference) {
-        // User provided explicit reference files
-        if (params.reference instanceof List) {
-            reference_files = params.reference
-        } else {
-            reference_files = [params.reference]
-        }
-        log.info "Using user-specified reference file(s): ${reference_files}"
-    } else if (params.panel) {
-        // Handle panel-based reference selection
-        switch(params.panel.toLowerCase()) {
-            case 'transition':
-                reference_files = [
-                    "$projectDir/data/targets/transition/transition.fasta",
-                    //"$projectDir/data/targets/LFAR/LFAR.fasta", // Commented out. Not used in DWR primers?
-                    "$projectDir/data/targets/WRAP/WRAP.fasta"
-                ]
-                log.info "Using transition panel references"
-                break
-            case 'full':
-                reference_files = [
-                    "$projectDir/data/targets/full/full.fna"//,
-                    //"$projectDir/data/targets/full_VGLL3Six6LFARWRAP/VGLL3Six6LFARWRAP.fna"
-                ]
-                log.info "Using full panel reference"
-                break
-            default:
-                error "Unrecognized panel type: ${params.panel}. Supported values are 'transition' or 'full'"
-        }
-        
-        // Verify all reference files exist
-        reference_files.each { ref ->
-            if (!file(ref).exists()) {
-                error "Reference file not found: ${ref}"
-            }
-        }
-        
-        // Verify corresponding VCF files exist
-        reference_files.each { ref ->
-            def basename = file(ref).simpleName
-            def vcf = file("${projectDir}/data/VCFs/${basename}.vcf")
-            if (!vcf.exists()) {
-                error "VCF file not found for reference: ${basename}. Expected: ${vcf}"
-            }
-        }
-    } else {
-        error "Neither reference nor panel type specified. Please provide either --reference or --panel (transition/full)"
-    }
-    
-    return reference_files
-}
-
-workflow {
     log.info """
     ==============================================
     DWR-CSI/chinook_gt Pipeline
@@ -519,7 +517,7 @@ workflow {
     // Collect all idxstats files
     idxstats_files_sorted = SAMTOOLS.out.idxstats
         .branch {
-            main: it[1] ==~ /transition|full|${params.fullgenome_ref_name}/
+            main: it[1] ==~ "transition|full|${params.fullgenome_ref_name}"
             other: true
             }
 

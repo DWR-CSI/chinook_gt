@@ -16,7 +16,7 @@ adapter_file: "data/adapters/GTseq-PE.fa"
 ots28_baseline: "data/baselines/full/RoSA_baseline_partial_infile.txt"
 n_loci: 204
 rubias_show_missing_data: "TRUE"
-panel: "full"
+
 concat_all_reads: false
 use_CKMR: TRUE
 CKMR_logl_threshold: 6.9

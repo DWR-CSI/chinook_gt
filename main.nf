@@ -15,6 +15,95 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+
+// Import modules
+include { FASTQC } from './modules/fastqc'
+include { DIMER_ANALYSIS } from './modules/dimer_analysis'
+include { TRIMMOMATIC; TRIMMOMATIC_SINGLE } from './modules/trimmomatic'
+include { FLASH2 } from './modules/flash2'
+include { BWA_MEM } from './modules/bwa_mem'
+include { SAMTOOLS } from './modules/samtools'
+include { MULTIQC } from './modules/multiqc'
+include { INDEX_REFERENCE } from './modules/index_reference'
+include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
+include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS} from './modules/microhaplot.nf'
+include { RUN_RUBIAS } from './modules/rubias.nf'
+include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
+include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
+include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
+include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
+include { CONCAT_READS } from './modules/concat_reads.nf'
+include { RUN_SEQUOIA } from './modules/sequoia.nf'
+include { CKMR_PO } from './modules/CKMRsim.nf'
+include { CKMRSIM_RUBIAS_SUMMARY } from './modules/summary.nf'
+// Full genome mapping modules (for LFAR, WRAP, VGLL3SIX6 loci)
+include { DOWNLOAD_AND_INDEX_GENOME } from './modules/fullgenome/download_genome'
+include { MAKE_THINNED_GENOME; MAKE_THINNED_GENOME_MOUNT } from './modules/fullgenome/make_thinned_genome'
+include { MAP_TO_FULL_GENOME; MAP_TO_FULL_GENOME_MOUNT } from './modules/fullgenome/map_fullgenome'
+include { EXTRACT_READS_FROM_REGIONS } from './modules/fullgenome/extract_regions'
+include { BAM_TO_FASTQ } from './modules/fullgenome/bam_to_fastq'
+include { REMAP_TO_THINNED_GENOME } from './modules/fullgenome/remap_thinned'
+
+// Functions
+
+def resolveReferences(params) {
+    def reference_files = []
+    
+    if (params.reference) {
+        // User provided explicit reference files
+        if (params.reference instanceof List) {
+            reference_files = params.reference
+        } else {
+            reference_files = [params.reference]
+        }
+        log.info "Using user-specified reference file(s): ${reference_files}"
+    } else if (params.panel) {
+        // Handle panel-based reference selection
+        def panel_lower = params.panel.toLowerCase()
+        if (panel_lower == 'transition') {
+                reference_files = [
+                    "$projectDir/data/targets/transition/transition.fasta",
+                    //"$projectDir/data/targets/LFAR/LFAR.fasta", // Commented out. Not used in DWR primers?
+                    "$projectDir/data/targets/WRAP/WRAP.fasta"
+                ]
+                log.info "Using transition panel references"
+        } else if (panel_lower == 'full') {
+                reference_files = [
+                    "$projectDir/data/targets/full/full.fna"//,
+                    //"$projectDir/data/targets/full_VGLL3Six6LFARWRAP/VGLL3Six6LFARWRAP.fna"
+                ]
+                log.info "Using full panel reference"
+        } else {
+                error "Unrecognized panel type: ${params.panel}. Supported values are 'transition' or 'full'"
+        }
+        
+        // Verify all reference files exist
+        reference_files.each { ref ->
+            if (!file(ref).exists()) {
+                error "Reference file not found: ${ref}"
+            }
+        }
+        
+        // Verify corresponding VCF files exist
+        reference_files.each { ref ->
+            def basename = file(ref).simpleName
+            def vcf = file("${projectDir}/data/VCFs/${basename}.vcf")
+            if (!vcf.exists()) {
+                error "VCF file not found for reference: ${basename}. Expected: ${vcf}"
+            }
+        }
+    } else {
+        error "Neither reference nor panel type specified. Please provide either --reference or --panel (transition/full)"
+    }
+    
+    return reference_files
+}
+
+
+// Set default values for thresholds if not specified in configs
+
+
+workflow {
 // Validate required parameters
 if (!params.outdir) {
     error "ERROR: --outdir parameter is required. Please specify an output directory."
@@ -22,37 +111,6 @@ if (!params.outdir) {
 if (!params.project) {
     error "ERROR: --project parameter is required. Please specify a project name."
 }
-
-// Set default values for thresholds if not specified in configs
-params.fullgenome_ref_name = params.fullgenome_ref_name ?: 'Chinook_FullPanel_VGLL3Six6LFARWRAP'
-params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
-params.full_genome_mount_path = params.full_genome_mount_path ?: null
-params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
-params.pofz_threshold = params.pofz_threshold ?: 0.8
-params.concat_all_reads = params.concat_all_reads ?: false
-params.use_sequoia = params.use_sequoia ?: false
-params.sequoia_mode = params.sequoia_mode ?: 'par'
-params.sequoia_missing_threshold = params.sequoia_missing_threshold ?: 0.5
-params.species_max_repro_age = params.species_max_repro_age ?: 6
-params.species_min_repro_age = params.species_min_repro_age ?: 1
-params.haplotype_depth = params.haplotype_depth ?: 4
-params.total_depth = params.total_depth ?: 8
-params.allele_balance = params.allele_balance ?: 0.35
-params.loci_to_remove = params.loci_to_remove ?: ""
-params.male_sexid_threshold = params.male_sexid_threshold ?: 0.01
-params.female_sexid_threshold = params.female_sexid_threshold ?: 0.002
-params.sexid_min_reads = params.sexid_min_reads ?: 10000
-params.offspring_max_age = params.offspring_max_age ?: 6
-params.offspring_birthyear = params.offspring_birthyear ?: 'unknown'
-params.offspring_maxBY = params.offspring_maxBY ?: params.offspring_birthyear
-params.offspring_minBY = params.offspring_minBY ?: ((params.offspring_maxBY) ? (params.offspring_maxBY - params.offspring_max_age) : null)
-params.use_CKMR = params.use_CKMR ?: false
-params.CKMR_logl_threshold = params.CKMR_logl_threshold ?: 6.9
-params.CKMR_min_loci = params.CKMR_min_loci ?: 90
-params.CKMR_parent_geno_input = params.CKMR_parent_geno_input ?: "$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"
-params.CKMR_extra_genos_allele_freqs = params.CKMR_extra_genos_allele_freqs ?: "$projectDir/examples/PBT/JPE2022-2024_geno_wide.csv"
-params.fullgenome_region_file = params.fullgenome_region_file ?: "$projectDir/data/regions/Chinook_FullPanel_VGLL3Six6LFARWRAP-Otsh_v1.0.txt"
-params.fullgenome_chunk_size = params.fullgenome_chunk_size ?: 30
 
 // Validate numeric threshold ranges
 if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
@@ -94,92 +152,6 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         error "ERROR: offspring_maxBY is required when use_sequoia is true"
     }
 }
-
-// Import modules
-include { FASTQC } from './modules/fastqc'
-include { TRIMMOMATIC; TRIMMOMATIC_SINGLE } from './modules/trimmomatic'
-include { FLASH2 } from './modules/flash2'
-include { BWA_MEM } from './modules/bwa_mem'
-include { SAMTOOLS } from './modules/samtools'
-include { MULTIQC } from './modules/multiqc'
-include { INDEX_REFERENCE } from './modules/index_reference'
-include { ANALYZE_IDXSTATS } from './modules/idxstats_analysis'
-include { GEN_MHP_SAMPLE_SHEET; PREP_MHP_RDS; GEN_HAPS} from './modules/microhaplot.nf'
-include { RUN_RUBIAS } from './modules/rubias.nf'
-include { STRUC_PARAMS; STRUCTURE } from './modules/structure.nf'
-include { STRUCTURE_ROSA_REPORT } from './modules/rosa.nf'
-include { BCFTOOLS_MPILEUP } from './modules/bcftools.nf'
-include { GREB_HAPSTR } from './modules/RoSA_hap_str.nf'
-include { CONCAT_READS } from './modules/concat_reads.nf'
-include { RUN_SEQUOIA } from './modules/sequoia.nf'
-include { CKMR_PO } from './modules/CKMRsim.nf'
-include { CKMRSIM_RUBIAS_SUMMARY } from './modules/summary.nf'
-// Full genome mapping modules (for LFAR, WRAP, VGLL3SIX6 loci)
-include { DOWNLOAD_AND_INDEX_GENOME } from './modules/fullgenome/download_genome'
-include { MAKE_THINNED_GENOME; MAKE_THINNED_GENOME_MOUNT } from './modules/fullgenome/make_thinned_genome'
-include { MAP_TO_FULL_GENOME; MAP_TO_FULL_GENOME_MOUNT } from './modules/fullgenome/map_fullgenome'
-include { EXTRACT_READS_FROM_REGIONS } from './modules/fullgenome/extract_regions'
-include { BAM_TO_FASTQ } from './modules/fullgenome/bam_to_fastq'
-include { REMAP_TO_THINNED_GENOME } from './modules/fullgenome/remap_thinned'
-
-// Functions
-
-def resolveReferences(params) {
-    def reference_files = []
-    
-    if (params.reference) {
-        // User provided explicit reference files
-        if (params.reference instanceof List) {
-            reference_files = params.reference
-        } else {
-            reference_files = [params.reference]
-        }
-        log.info "Using user-specified reference file(s): ${reference_files}"
-    } else if (params.panel) {
-        // Handle panel-based reference selection
-        switch(params.panel.toLowerCase()) {
-            case 'transition':
-                reference_files = [
-                    "$projectDir/data/targets/transition/transition.fasta",
-                    //"$projectDir/data/targets/LFAR/LFAR.fasta", // Commented out. Not used in DWR primers?
-                    "$projectDir/data/targets/WRAP/WRAP.fasta"
-                ]
-                log.info "Using transition panel references"
-                break
-            case 'full':
-                reference_files = [
-                    "$projectDir/data/targets/full/full.fna"//,
-                    //"$projectDir/data/targets/full_VGLL3Six6LFARWRAP/VGLL3Six6LFARWRAP.fna"
-                ]
-                log.info "Using full panel reference"
-                break
-            default:
-                error "Unrecognized panel type: ${params.panel}. Supported values are 'transition' or 'full'"
-        }
-        
-        // Verify all reference files exist
-        reference_files.each { ref ->
-            if (!file(ref).exists()) {
-                error "Reference file not found: ${ref}"
-            }
-        }
-        
-        // Verify corresponding VCF files exist
-        reference_files.each { ref ->
-            def basename = file(ref).simpleName
-            def vcf = file("${projectDir}/data/VCFs/${basename}.vcf")
-            if (!vcf.exists()) {
-                error "VCF file not found for reference: ${basename}. Expected: ${vcf}"
-            }
-        }
-    } else {
-        error "Neither reference nor panel type specified. Please provide either --reference or --panel (transition/full)"
-    }
-    
-    return reference_files
-}
-
-workflow {
     log.info """
     ==============================================
     DWR-CSI/chinook_gt Pipeline
@@ -345,8 +317,17 @@ workflow {
 
     
     FASTQC(ch_input_fastq) // FASTQC all input files
+    DIMER_ANALYSIS(ch_reads_branched.paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
+
+    merged_counts = DIMER_ANALYSIS.out.counts
+        .collectFile(
+            name: 'dimer_counts_mqc.tsv',
+            keepHeader: true,
+            storeDir: "${params.outdir}/${params.project}/dimers/summary"
+        )
+
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)
-    FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.max_overlap)
+    FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
     
     // Process single-end reads
     ch_reads_branched.single
@@ -519,7 +500,7 @@ workflow {
     // Collect all idxstats files
     idxstats_files_sorted = SAMTOOLS.out.idxstats
         .branch {
-            main: it[1] ==~ /transition|full|${params.fullgenome_ref_name}/
+            main: it[1] ==~ "transition|full|${params.fullgenome_ref_name}"
             other: true
             }
 
@@ -645,6 +626,7 @@ workflow {
     ch_multiqc_files = ch_multiqc_files.mix(FLASH2.out.log)
     //ch_multiqc_files = ch_multiqc_files.mix(BWA_MEM.out.log)
     ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect{it[2]})
+    ch_multiqc_files = ch_multiqc_files.mix(merged_counts)
     //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
     MULTIQC(ch_multiqc_files.collect())
     

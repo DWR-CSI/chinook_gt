@@ -47,6 +47,12 @@
                     "default": 3,
                     "minimum": 1
                 },
+                "min_outie_overlap": {
+                    "type": "integer",
+                    "description": "Minimum overlap length for outie read merging",
+                    "default": 20,
+                    "minimum": 1
+                },
                 "max_overlap": {
                     "type": "integer",
                     "description": "Maximum overlap length for read merging",

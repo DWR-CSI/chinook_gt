@@ -352,7 +352,6 @@ workflow {
         .collectFile(
             name: 'dimer_counts.tsv',
             storeDir: "${params.outdir}/${params.project}/dimers",
-            header: 'sample_id\ttotal_reads\tdimer_reads\tpercent_dimer',
             newLine: true
         )
 

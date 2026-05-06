@@ -27,7 +27,6 @@ process DIMER_ANALYSIS {
         -d . \
         ${input_1} ${input_2}
 
-    # compute metrics and write ONE LINE ONLY (no header)
     zcat ${sample_id}.extendedFrags.fastq.gz | \
     awk -v sid="${sample_id}" '
         NR % 4 == 2 {

@@ -32,11 +32,5 @@ process FLASH2 {
         -d . \
         ${input_1} ${input_2} \
         > ${sample_id}.flash2.log 2>&1
-
-    # Count merged reads and length filter (<=50 bp)
-    {
-        printf "sample_id\\ttotal_reads\\tdimer_reads\\tpercent_dimer\\n"
-        zcat ${sample_id}.extendedFrags.fastq.gz | awk -v sid="${sample_id}" 'BEGIN{OFS="\\t"} NR % 4 == 2 {total++; if (length(\$0) <= 50) short++} END {pct = (total > 0) ? (short / total) * 100 : 0; printf "%s\\t%d\\t%d\\t%.2f\\n", sid, total, short, pct}'
-    } > ${sample_id}.counts.tsv
     """
 }

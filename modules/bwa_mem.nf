@@ -5,7 +5,7 @@ process BWA_MEM {
     'https://depot.galaxyproject.org/singularity/bwa:0.7.18--he4a0461_1':
     'quay.io/biocontainers/bwa:0.7.18--he4a0461_1' }"
 
-    publishDir "${params.outdir}/${params.project}/bwa_mem/${ref_name}", mode: 'copy'
+    publishDir "${params.outdir}/${params.project}/bwa_mem", mode: 'copy', saveAs: { filename -> "${ref_name}/$filename" }
 
     input:
     tuple val(sample_id), path(merged_reads), val(ref_name), path(ref_and_index_files), path(vcf)

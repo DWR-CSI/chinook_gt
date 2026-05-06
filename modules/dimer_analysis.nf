@@ -10,7 +10,7 @@ process DIMER_ANALYSIS {
     val max_overlap
 
     output:
-    stdout, emit: counts
+    path "${sample_id}.counts.tsv", emit: counts
 
     script:
     def input_1 = reads[0]

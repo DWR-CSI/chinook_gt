@@ -3,7 +3,7 @@ process GEN_MHP_SAMPLE_SHEET {
     label 'process_xsmall'
     container 'docker.io/nfcore/base:2.1'
 
-    publishDir "${params.outdir}/${params.project}/mhp/${reference}", mode: 'copy', pattern: '*_mhp_samplesheet.tsv'
+    publishDir "${params.outdir}/${params.project}/mhp", mode: 'copy', pattern: '*_mhp_samplesheet.tsv', saveAs: { filename -> "${reference}/$filename" }
 
     input:
     tuple val(sample_id), val(reference), path(vcf), path(aligned_sam_files)
@@ -28,7 +28,7 @@ process PREP_MHP_RDS {
     tag "Prepare Microhaplotype RDS files: $reference"
     label 'process_high'
     container 'docker.io/bnguyen29/r-rubias:1.0.4'
-    publishDir "${params.outdir}/${params.project}/mhp/${reference}", mode: 'copy'
+    publishDir "${params.outdir}/${params.project}/mhp", mode: 'copy', saveAs: { filename -> "${reference}/$filename" }
 
     input:
     tuple val(reference), path(samplesheet), path(vcf_file), path(sam_files)

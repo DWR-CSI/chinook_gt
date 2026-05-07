@@ -18,8 +18,7 @@ process MAP_TO_FULL_GENOME {
     def reads = merged_reads_list instanceof List ? merged_reads_list : [merged_reads_list]
     
     def bwa_cmds = ""
-    for (int i = 0; i < samples.size(); i++) {
-        def id = samples[i]
+    samples.eachWithIndex { id, i ->
         def read = reads[i]
         bwa_cmds += """
         echo "Processing sample ${id}..."
@@ -62,8 +61,7 @@ process MAP_TO_FULL_GENOME_MOUNT {
     def reads = merged_reads_list instanceof List ? merged_reads_list : [merged_reads_list]
 
     def bwa_cmds = ""
-    for (int i = 0; i < samples.size(); i++) {
-        def id = samples[i]
+    samples.eachWithIndex { id, i ->
         def read = reads[i]
         bwa_cmds += """
         echo "Processing sample ${id}..."

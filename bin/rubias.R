@@ -414,7 +414,7 @@ raw_repunit_probs <- all_full_mix_results %>%
     PofZ = case_when(
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ NA_real_,
       (RoSA == "Late") & (repunit == "spring") ~ NA_real_,
-      repunit == "spring" ~ PofZ,
+      (RoSA != "Uncertain") & (repunit == "spring") ~ PofZ,
       TRUE ~ NA_real_
     )
   )
@@ -432,8 +432,8 @@ mix_results_wide <- all_full_mix_results %>%
   )) %>% # Replace NA with 0
   mutate(across(
     matches("spring|winter|fall|late"),
-    ~ if_else(final_call == "Missing Data", NA_real_, .)
-  )) %>% # Replace PofZ with NA if final call is "Missing Data"
+    ~ if_else(final_call %in% c("Unassigned: Missing data", "Unassigned: RoSA missing", "Missing Data"), NA_real_, .)
+  )) %>% # Replace PofZ with NA if final call is Unassigned
   mutate(across(
     matches("spring|winter|fall|late"),
     ~ round(., digits = 2)

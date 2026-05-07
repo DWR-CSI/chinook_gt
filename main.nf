@@ -15,85 +15,6 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// Validate required parameters
-if (!params.outdir) {
-    error "ERROR: --outdir parameter is required. Please specify an output directory."
-}
-if (!params.project) {
-    error "ERROR: --project parameter is required. Please specify a project name."
-}
-
-// Set default values for thresholds if not specified in configs
-params.fullgenome_ref_name = params.fullgenome_ref_name ?: 'Chinook_FullPanel_VGLL3Six6LFARWRAP'
-params.ots28_missing_threshold = params.ots28_missing_threshold ?: 0.5
-params.full_genome_mount_path = params.full_genome_mount_path ?: null
-params.gsi_missing_threshold = params.gsi_missing_threshold ?: 0.6
-params.pofz_threshold = params.pofz_threshold ?: 0.8
-params.concat_all_reads = params.concat_all_reads ?: false
-params.use_sequoia = params.use_sequoia ?: false
-params.sequoia_mode = params.sequoia_mode ?: 'par'
-params.sequoia_missing_threshold = params.sequoia_missing_threshold ?: 0.5
-params.species_max_repro_age = params.species_max_repro_age ?: 6
-params.species_min_repro_age = params.species_min_repro_age ?: 1
-params.haplotype_depth = params.haplotype_depth ?: 4
-params.total_depth = params.total_depth ?: 8
-params.allele_balance = params.allele_balance ?: 0.35
-params.loci_to_remove = params.loci_to_remove ?: ""
-params.male_sexid_threshold = params.male_sexid_threshold ?: 0.01
-params.female_sexid_threshold = params.female_sexid_threshold ?: 0.002
-params.sexid_min_reads = params.sexid_min_reads ?: 10000
-params.offspring_max_age = params.offspring_max_age ?: 6
-params.offspring_birthyear = params.offspring_birthyear ?: 'unknown'
-params.offspring_maxBY = params.offspring_maxBY ?: params.offspring_birthyear
-params.offspring_minBY = params.offspring_minBY ?: ((params.offspring_maxBY) ? (params.offspring_maxBY - params.offspring_max_age) : null)
-params.use_CKMR = params.use_CKMR ?: false
-params.CKMR_logl_threshold = params.CKMR_logl_threshold ?: 6.9
-params.CKMR_min_loci = params.CKMR_min_loci ?: 90
-params.CKMR_parent_geno_input = params.CKMR_parent_geno_input ?: "$projectDir/examples/PBT/FRH2024_reference_genotypes.csv"
-params.CKMR_extra_genos_allele_freqs = params.CKMR_extra_genos_allele_freqs ?: "$projectDir/examples/PBT/JPE2022-2024_geno_wide.csv"
-params.fullgenome_region_file = params.fullgenome_region_file ?: "$projectDir/data/regions/Chinook_FullPanel_VGLL3Six6LFARWRAP-Otsh_v1.0.txt"
-params.fullgenome_chunk_size = params.fullgenome_chunk_size ?: 30
-
-// Validate numeric threshold ranges
-if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
-    error "ERROR: ots28_missing_threshold must be between 0 and 1 (got ${params.ots28_missing_threshold})"
-}
-if (params.gsi_missing_threshold < 0 || params.gsi_missing_threshold > 1) {
-    error "ERROR: gsi_missing_threshold must be between 0 and 1 (got ${params.gsi_missing_threshold})"
-}
-if (params.pofz_threshold < 0 || params.pofz_threshold > 1) {
-    error "ERROR: pofz_threshold must be between 0 and 1 (got ${params.pofz_threshold})"
-}
-if (params.allele_balance < 0 || params.allele_balance > 1) {
-    error "ERROR: allele_balance must be between 0 and 1 (got ${params.allele_balance})"
-}
-if (params.male_sexid_threshold < 0 || params.male_sexid_threshold > 1) {
-    error "ERROR: male_sexid_threshold must be between 0 and 1 (got ${params.male_sexid_threshold})"
-}
-if (params.female_sexid_threshold < 0 || params.female_sexid_threshold > 1) {
-    error "ERROR: female_sexid_threshold must be between 0 and 1 (got ${params.female_sexid_threshold})"
-}
-if (params.haplotype_depth < 0) {
-    error "ERROR: haplotype_depth must be non-negative (got ${params.haplotype_depth})"
-}
-if (params.total_depth < 0) {
-    error "ERROR: total_depth must be non-negative (got ${params.total_depth})"
-}
-if (params.sexid_min_reads < 0) {
-    error "ERROR: sexid_min_reads must be non-negative (got ${params.sexid_min_reads})"
-}
-
-if (params.use_sequoia) { // only validated if Sequoia is used
-    if (params.sequoia_missing_threshold < 0 || params.sequoia_missing_threshold > 1) {
-        error "ERROR: sequoia_missing_threshold must be between 0 and 1 (got ${params.sequoia_missing_threshold})"
-    }
-    if (params.species_max_repro_age < params.species_min_repro_age) {
-        error "ERROR: species_max_repro_age (${params.species_max_repro_age}) must be >= species_min_repro_age (${params.species_min_repro_age})"
-    }
-    if (!params.offspring_maxBY) {
-        error "ERROR: offspring_maxBY is required when use_sequoia is true"
-    }
-}
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
@@ -138,23 +59,21 @@ def resolveReferences(params) {
         log.info "Using user-specified reference file(s): ${reference_files}"
     } else if (params.panel) {
         // Handle panel-based reference selection
-        switch(params.panel.toLowerCase()) {
-            case 'transition':
+        def panel_lower = params.panel.toLowerCase()
+        if (panel_lower == 'transition') {
                 reference_files = [
                     "$projectDir/data/targets/transition/transition.fasta",
                     //"$projectDir/data/targets/LFAR/LFAR.fasta", // Commented out. Not used in DWR primers?
                     "$projectDir/data/targets/WRAP/WRAP.fasta"
                 ]
                 log.info "Using transition panel references"
-                break
-            case 'full':
+        } else if (panel_lower == 'full') {
                 reference_files = [
                     "$projectDir/data/targets/full/full.fna"//,
                     //"$projectDir/data/targets/full_VGLL3Six6LFARWRAP/VGLL3Six6LFARWRAP.fna"
                 ]
                 log.info "Using full panel reference"
-                break
-            default:
+        } else {
                 error "Unrecognized panel type: ${params.panel}. Supported values are 'transition' or 'full'"
         }
         
@@ -180,7 +99,59 @@ def resolveReferences(params) {
     return reference_files
 }
 
+
+// Set default values for thresholds if not specified in configs
+
+
 workflow {
+// Validate required parameters
+if (!params.outdir) {
+    error "ERROR: --outdir parameter is required. Please specify an output directory."
+}
+if (!params.project) {
+    error "ERROR: --project parameter is required. Please specify a project name."
+}
+
+// Validate numeric threshold ranges
+if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
+    error "ERROR: ots28_missing_threshold must be between 0 and 1 (got ${params.ots28_missing_threshold})"
+}
+if (params.gsi_missing_threshold < 0 || params.gsi_missing_threshold > 1) {
+    error "ERROR: gsi_missing_threshold must be between 0 and 1 (got ${params.gsi_missing_threshold})"
+}
+if (params.pofz_threshold < 0 || params.pofz_threshold > 1) {
+    error "ERROR: pofz_threshold must be between 0 and 1 (got ${params.pofz_threshold})"
+}
+if (params.allele_balance < 0 || params.allele_balance > 1) {
+    error "ERROR: allele_balance must be between 0 and 1 (got ${params.allele_balance})"
+}
+if (params.male_sexid_threshold < 0 || params.male_sexid_threshold > 1) {
+    error "ERROR: male_sexid_threshold must be between 0 and 1 (got ${params.male_sexid_threshold})"
+}
+if (params.female_sexid_threshold < 0 || params.female_sexid_threshold > 1) {
+    error "ERROR: female_sexid_threshold must be between 0 and 1 (got ${params.female_sexid_threshold})"
+}
+if (params.haplotype_depth < 0) {
+    error "ERROR: haplotype_depth must be non-negative (got ${params.haplotype_depth})"
+}
+if (params.total_depth < 0) {
+    error "ERROR: total_depth must be non-negative (got ${params.total_depth})"
+}
+if (params.sexid_min_reads < 0) {
+    error "ERROR: sexid_min_reads must be non-negative (got ${params.sexid_min_reads})"
+}
+
+if (params.use_sequoia) { // only validated if Sequoia is used
+    if (params.sequoia_missing_threshold < 0 || params.sequoia_missing_threshold > 1) {
+        error "ERROR: sequoia_missing_threshold must be between 0 and 1 (got ${params.sequoia_missing_threshold})"
+    }
+    if (params.species_max_repro_age < params.species_min_repro_age) {
+        error "ERROR: species_max_repro_age (${params.species_max_repro_age}) must be >= species_min_repro_age (${params.species_min_repro_age})"
+    }
+    if (!params.offspring_maxBY) {
+        error "ERROR: offspring_maxBY is required when use_sequoia is true"
+    }
+}
     log.info """
     ==============================================
     DWR-CSI/chinook_gt Pipeline
@@ -528,7 +499,7 @@ workflow {
     // Collect all idxstats files
     idxstats_files_sorted = SAMTOOLS.out.idxstats
         .branch {
-            main: it[1] ==~ /transition|full|${params.fullgenome_ref_name}/
+            main: it[1] ==~ "transition|full|${params.fullgenome_ref_name}"
             other: true
             }
 

@@ -18,6 +18,7 @@ nextflow.enable.dsl = 2
 
 // Import modules
 include { FASTQC } from './modules/fastqc'
+include { DIMER_ANALYSIS } from './modules/dimer_analysis'
 include { TRIMMOMATIC; TRIMMOMATIC_SINGLE } from './modules/trimmomatic'
 include { FLASH2 } from './modules/flash2'
 include { BWA_MEM } from './modules/bwa_mem'
@@ -316,8 +317,16 @@ if (params.use_sequoia) { // only validated if Sequoia is used
 
     
     FASTQC(ch_input_fastq) // FASTQC all input files
+    DIMER_ANALYSIS(ch_reads_branched.paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
+
+    merged_counts = DIMER_ANALYSIS.out.counts
+        .collectFile(
+            name: 'dimer_counts.tsv',
+            storeDir: "${params.outdir}/${params.project}/dimers/summary"
+        )
+
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)
-    FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.max_overlap)
+    FLASH2(TRIMMOMATIC.out.trimmed_paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
     
     // Process single-end reads
     ch_reads_branched.single

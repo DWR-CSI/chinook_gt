@@ -33,7 +33,7 @@ process DIMER_ANALYSIS {
     zcat ${sample_id}.extendedFrags.fastq.gz | \
     awk -v sid="${sample_id}" '
         BEGIN {
-            print "sample_id\ttotal_merged\tdimer_count\tdimer_percent"
+            print "sample_id\tdimer_count\tnon_dimer_count\tdimer_percent"
         }
         NR % 4 == 2 {
             total++
@@ -41,7 +41,8 @@ process DIMER_ANALYSIS {
         }
         END {
             pct = (total > 0) ? (short / total) * 100 : 0
-            printf "%s\\t%d\\t%d\\t%.2f\\n", sid, total, short, pct
+            non_short = total - short
+            printf "%s\\t%d\\t%d\\t%.2f\\n", sid, short, non_short, pct
         }
     ' > ${sample_id}.counts.tsv
 

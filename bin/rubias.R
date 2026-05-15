@@ -423,21 +423,21 @@ raw_repunit_probs <- all_full_mix_results %>%
 mix_results_wide <- all_full_mix_results %>%
   spread(repunit, Prob_repunit) %>%
   group_by(indiv) %>%
-  left_join(ots28_info, by = "indiv") %>% # add in the OTS28 info
-  mutate(RoSA = if_else(RoSA == "Intermediate", "Heterozygote", RoSA)) %>% #convert "Intermediate" to "Heterozygote"
-  left_join(repunit_calls %>% ungroup() %>% select(indiv, fraction_missing, final_call, probability = prob_repunit), by = "indiv") %>% # add in the final calls
+  left_join(ots28_info, by = "indiv") %>%
+  mutate(RoSA = if_else(RoSA == "Intermediate", "Heterozygote", RoSA)) %>%
+  left_join(repunit_calls %>% ungroup() %>% select(indiv, fraction_missing, final_call, probability = prob_repunit), by = "indiv") %>%
   mutate(across(
     matches("spring|winter|fall|late"),
     ~ replace_na(., 0)
-  )) %>% # Replace NA with 0
+  )) %>%
   mutate(across(
     matches("spring|winter|fall|late"),
-    ~ if_else(final_call == "Missing Data", NA_real_, .)
-  )) %>% # Replace PofZ with NA if final call is "Missing Data"
+    ~ if_else(final_call %in% c("Unassigned: Missing data", "Unassigned: RoSA missing", "Missing Data"), NA_real_, .)
+  )) %>%
   mutate(across(
     matches("spring|winter|fall|late"),
     ~ round(., digits = 2)
-  )) %>% # Round to 2 decimal places
+  )) %>%
   mutate(
     GSI_missing = round(fraction_missing * 100, digits = 1),
     Chr28_missing = round(ots28_missing, digits = 1),
@@ -456,6 +456,7 @@ mix_results_wide <- all_full_mix_results %>%
     CV_Winter = winter
   ) %>%
   left_join(raw_repunit_probs %>% select(SampleID = indiv, Tributary = tributary), by = "SampleID") %>%
+  mutate(Tributary = if_else(is.na(Pop_Structure_ID) | Pop_Structure_ID == "", NA_character_, Tributary)) %>%  # ADD THIS LINE
   left_join(all_full_mix_wide, by = "SampleID") %>%
   mutate(across(
     .cols = ButteFall:SacWin,

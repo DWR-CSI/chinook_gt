@@ -626,7 +626,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
     ch_multiqc_files = ch_multiqc_files.mix(FLASH2.out.log)
     //ch_multiqc_files = ch_multiqc_files.mix(BWA_MEM.out.log)
     ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect{it[2]})
-    ch_multiqc_files = ch_multiqc.files.mix(merged_counts)
+    ch_multiqc_files = ch_multiqc_files.mix(merged_counts)
     //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
     MULTIQC(ch_multiqc_files.collect())
     

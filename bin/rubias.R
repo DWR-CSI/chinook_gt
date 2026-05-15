@@ -389,7 +389,7 @@ repunit_calls <- all_full_mix_results %>%
       (RoSA == "Early") & (repunit %in% c("fall", "latefall")) ~ "Spring",
       (RoSA == "Late") & (repunit == "spring") ~ "Fall",
       fraction_missing < gsi_missing_threshold ~ repunit,
-      TRUE ~ "Assignment Error"
+      TRUE ~ NA_character_
     )
   ) %>%
   select(indiv, RoSA, ots28_missing, n_non_miss_loci, fraction_missing, best_repunit = repunit, prob_repunit = Prob_repunit, final_call)

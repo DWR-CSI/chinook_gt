@@ -436,6 +436,10 @@ mix_results_wide <- all_full_mix_results %>%
   )) %>%
   mutate(across(
     matches("spring|winter|fall|late"),
+    ~ if_else(fraction_missing > gsi_missing_threshold, NA_real_, .)
+  )) %>%
+  mutate(across(
+    matches("spring|winter|fall|late"),
     ~ round(., digits = 2)
   )) %>%
   mutate(
@@ -472,7 +476,7 @@ mix_results_wide <- all_full_mix_results %>%
 #   mutate(
 #     Pop_Structure_ID = case_when(
 #       Species == "non-Chinook" ~ "non-Chinook",
-#       (LFAR_markers_present == FALSE) & (Pop_Structure_ID %in% c("FALL", "LATEFALL")) ~ "FALL OR LATEFALL", # If LFAR markers are not present and final call is Fall or Latefall, change final call to Fall / Late Fall
+#       (LFAR_markers_present == FALSE) & (Pop_Structure_ID %in% c("FALL", "LATEFALL")) ~ "FALL OR LATEFALL", # If LFAR markers are not present and final call is Fall or Latefall, change final ca[...]
 #       TRUE ~ Pop_Structure_ID
 #     )
 #   )

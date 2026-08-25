@@ -21,7 +21,6 @@ clean_sample_name <- function(x) {
   x %>%
     str_remove("_$") %>% # Remove trailing underscore
     str_remove("_S\\d+_?$") %>% # Remove _S123_ suffix
-    str_remove("_R\\d+_?$") %>% # Remove _R123_ suffix
     str_remove("_L\\d+_?$") # Remove _L123_ suffix
 }
 

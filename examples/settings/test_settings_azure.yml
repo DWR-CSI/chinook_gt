@@ -1,0 +1,196 @@
+# ==============================================================================
+# Chinook Genotyping-in-Thousands (GT-seq) Pipeline Configuration
+# Microsoft Azure Batch Execution Settings
+#
+# Usage:
+#   nextflow main.nf -profile azure -params-file examples/settings/test_settings_azure.yml
+#   nextflow main.nf -profile azure_large -params-file examples/settings/test_settings_azure.yml
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Project & Output Configuration
+# ------------------------------------------------------------------------------
+
+# Project name: Identifier for this run. Used as the subfolder name under outdir.
+# Must contain only alphanumeric characters, underscores, or hyphens (no spaces).
+project: 'test_run_26.10'
+
+# Output directory: Azure Blob Storage path where pipeline results and intermediate
+# directories will be written (e.g., bwa, flash2, microhaplotopia, rubias).
+outdir: 'az://nextflow/results/chinookGT_full/'
+
+# Panel type: Specifies the target panel and reference mapping strategy.
+# Options:
+#   - 'full': Full 204-locus panel (uses hybrid full-genome alignment for off-target loci).
+#   - 'transition': Earlier transition panel with fewer loci.
+panel: 'full'
+
+# Total number of target loci expected in the panel (full panel = 204).
+# Used for idxstats read distribution metrics and quality checks.
+n_loci: 204
+
+
+# ------------------------------------------------------------------------------
+# 2. Input Data Configuration
+# ------------------------------------------------------------------------------
+
+# Path pattern to input FASTQ files on Azure Blob Storage.
+# For paired-end reads, use {1,2} to match forward and reverse read pairs.
+input: "az://nextflow/raw_data/test3/*_L001_R{1,2}_001.fastq.gz"
+
+# Input format detection mode:
+# Options:
+#   - 'auto': Automatically detect single vs. paired-end reads based on pattern (recommended).
+#   - 'paired': Treat inputs strictly as paired-end reads.
+#   - 'single': Treat inputs strictly as single-end reads.
+input_format: "auto"
+
+
+# ------------------------------------------------------------------------------
+# 3. Quality Control & Read Trimming
+# ------------------------------------------------------------------------------
+
+# Run FastQC on raw input FASTQ files before processing (true/false).
+# Set to false to reduce execution time and cloud compute costs when raw QC is not needed.
+run_fastqc: false
+
+# Run primer-dimer check via the DIMER_ANALYSIS module (true/false).
+# Recommended to keep true to flag primer-dimer contamination in GT-seq libraries.
+run_dimer_check: true
+
+# Path to FASTA file containing sequencing adapter sequences for Trimmomatic trimming.
+# Uses data/adapters/GTseq-PE.fa by default (staged automatically in container).
+adapter_file: "data/adapters/GTseq-PE.fa"
+
+# Trimmomatic quality and length trimming parameters:
+#   LEADING:15       - Cut bases off the start if quality drops below Phred Q15
+#   TRAILING:15      - Cut bases off the end if quality drops below Phred Q15
+#   SLIDINGWINDOW:4:15 - Scan 4 bases; cut when average quality drops below Q15
+#   MINLEN:36        - Drop reads that fall below 36 bp after trimming
+trim_params: "LEADING:15 TRAILING:15 SLIDINGWINDOW:4:15 MINLEN:36"
+
+
+# ------------------------------------------------------------------------------
+# 4. Read Merging & Alignment Options
+# ------------------------------------------------------------------------------
+
+# Minimum overlap length (bp) required for FLASH2 to merge paired-end reads.
+# Default is 3 (short overlap accommodates variable GT-seq amplicon lengths).
+min_overlap: 3
+
+# Maximum overlap length (bp) for FLASH2 to merge paired-end reads.
+max_overlap: 400
+
+# Concatenate all read types (merged, unmerged, and unpaired) for BWA mapping (true/false).
+# When false (default), only merged and single-end reads are mapped.
+concat_all_reads: false
+
+
+# ------------------------------------------------------------------------------
+# 5. Reference Datasets & Baselines
+# ------------------------------------------------------------------------------
+
+# Locus index file: CSV mapping transition/panel loci names to coordinates and indices.
+locus_index: 'data/indices/transition_loci_indices_20241104.csv'
+
+# Genetic Stock Identification (GSI) baseline CSV for RUBIAS on Azure Blob Storage.
+# Contains reference allele frequencies for Central Valley Chinook salmon reporting units.
+baseline: 'az://nextflow/reference/full_panel/SWFSC-chinook-reference-baseline-CV.csv'
+
+# Reference baseline file for Structure/RoSA (OTS28) run-timing analysis.
+ots28_baseline: "data/baselines/full/RoSA_baseline_partial_infile.txt"
+
+
+# ------------------------------------------------------------------------------
+# 6. GSI (RUBIAS) & Run Timing (RoSA / OTS28) Thresholds
+# ------------------------------------------------------------------------------
+
+# Include explicit missing data calculations in RUBIAS reporting ("TRUE" or "FALSE").
+rubias_show_missing_data: "TRUE"
+
+# GSI missing data threshold: Max allowable proportion of missing loci (range: 0.0 - 1.0).
+# If an individual is missing more than this fraction, its stock assignment is deemed invalid.
+gsi_missing_threshold: 0.6
+
+# PofZ ambiguity threshold: Minimum posterior probability required for stock assignment (0.0 - 1.0).
+# If the maximum Probability of Z-score is below this value, the result is flagged ambiguous.
+pofz_threshold: 0.8
+
+# OTS28 missing data threshold: Missing data cutoff for OTS28 / RoSA run-timing (0.0 - 1.0).
+# If the missing proportion is below this threshold, consider OTS28 data Intermediate instead of uncertain.
+ots28_missing_threshold: 0.7
+
+
+# ------------------------------------------------------------------------------
+# 7. Parentage-Based Tagging (PBT): CKMRsim
+# ------------------------------------------------------------------------------
+
+# Enable CKMRsim for close-kin mark-recapture parent-offspring analysis (true/false).
+use_CKMR: FALSE
+
+# Log-likelihood ratio threshold for identifying parent-offspring pairs (default: 6.9).
+# Higher values are more conservative.
+CKMR_logl_threshold: 6.9
+
+# Minimum number of genotyped loci required for valid CKMR parent-offspring assignment.
+CKMR_min_loci: 90
+
+# Path to parent reference genotypes CSV file (wide format: SAMPLE_ID, Locus.1, Locus.2).
+CKMR_parent_geno_input: "examples/PBT/FRH2024_reference_genotypes.csv"
+
+
+# ------------------------------------------------------------------------------
+# 8. Parentage-Based Tagging (PBT): Sequoia
+# ------------------------------------------------------------------------------
+
+# Enable Sequoia for parentage-based tagging and pedigree reconstruction (true/false).
+use_sequoia: FALSE
+
+# Sequoia analysis mode:
+#   - 'par': Parentage analysis only (faster, recommended for initial passes).
+#   - 'ped': Full pedigree analysis including siblings (more thorough, computationally intensive).
+sequoia_mode: "ped"
+
+# Maximum allowable missing data proportion for Sequoia (range: 0.0 - 1.0).
+# 0.5 is default; use 0.2 for conservative filtering.
+sequoia_missing_threshold: 0.5
+
+# Path to parent reference genotypes file (Sequoia formatted).
+parent_geno_input: "examples/PBT/FRH2024_reference_genotypes.csv"
+
+# Path to parent life-history metadata file (Sequoia formatted: ID, Sex, BirthYear).
+parent_lifehistory: "examples/PBT/FRH2024_reference_lifehistory.txt"
+
+# Birth year of the offspring cohort (integer year or "unknown").
+offspring_birthyear: "unknown"
+
+# Minimum possible birth year for offspring (integer year or "unknown").
+offspring_minBY: "unknown"
+
+# Maximum possible birth year for offspring (e.g., current year or 2025).
+offspring_maxBY: 2025
+
+# Maximum age (in years) of offspring in the dataset.
+offspring_max_age: 8
+
+# Minimum reproductive age of the species (Chinook salmon default: 1).
+species_min_repro_age: 1
+
+# Maximum reproductive age of the species (Chinook salmon default: 8).
+species_max_repro_age: 8
+
+
+# ------------------------------------------------------------------------------
+# 9. Additional Optional Parameters (Defaults shown for reference)
+# ------------------------------------------------------------------------------
+# Azure File Share mount path for reference genome (used in large full-panel runs):
+# full_genome_mount_path: "/mnt/batch/tasks/fsmounts/seqres/reference/genomes"
+#
+# loci_to_remove: ""              # Perl regex of loci to filter out (e.g. "(NC_037130\\.1:1062935[.-]1063235)")
+# haplotype_depth: 4              # Min read depth required to retain a microhaplotype
+# total_depth: 8                  # Min total locus read depth required to retain genotype
+# allele_balance: 0.35            # Min allele balance ratio (minor allele reads / major allele reads)
+# male_sexid_threshold: 0.01      # Min proportion of reads mapped to sdy_I183 locus for male call
+# female_sexid_threshold: 0.002   # Max proportion of reads mapped to sdy_I183 locus for female call
+# sexid_min_reads: 10000          # Min mapped reads required for confident sex ID assignment
+# CKMR_extra_genos_allele_freqs: "examples/PBT/JPE2022-2024_geno_wide.csv" # Extra genotypes for allele frequencies

@@ -1,6 +1,6 @@
 # Input
 input: "examples/fastqs/*_R{1,2}_concatenated.fastq.gz"
-project: 'test_run_with_concat'
+project: 'test_run_26.10'
 outdir: 'test/output'
 ots28_missing_threshold: 0.7
 pofz_threshold: 0.8

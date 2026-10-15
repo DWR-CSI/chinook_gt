@@ -14,16 +14,15 @@ process STRUC_PARAMS {
     path "extraparams.txt", emit: e_params
     path "structure_data.txt", emit: structure_input
 
-    shell:
+    script:
     """
-    #!/bin/bash
-    cat !{ots28_baseline} > structure_data.txt
-    tail -n +2 !{ots28_num_genotypes} >> structure_data.txt
+    cat ${ots28_baseline} > structure_data.txt
+    tail -n +2 ${ots28_num_genotypes} >> structure_data.txt
     N_LINES=\$(wc -l < structure_data.txt)
     N_INDIVS=\$((N_LINES - 1))
 
     cat <<EOF > mainparams.txt
-    #define OUTFILE !{params.project}_RoSA_structure.txt
+    #define OUTFILE ${params.project}_RoSA_structure.txt
     #define INFILE structure_data.txt
     #define NUMINDS \$N_INDIVS
     #define NUMLOCI 7

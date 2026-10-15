@@ -44,7 +44,30 @@ include { EXTRACT_READS_FROM_REGIONS } from './modules/fullgenome/extract_region
 include { BAM_TO_FASTQ } from './modules/fullgenome/bam_to_fastq'
 include { REMAP_TO_THINNED_GENOME } from './modules/fullgenome/remap_thinned'
 
-// Functions
+// Helper functions for parameter type coercion (Nextflow 26+ string compatibility)
+def toBool(val, defaultVal = false) {
+    if (val == null) return defaultVal
+    if (val instanceof Boolean) return val
+    if (val instanceof String) {
+        def s = val.trim().toLowerCase()
+        if (s in ['true', '1', 'yes']) return true
+        if (s in ['false', '0', 'no']) return false
+    }
+    return val ? true : false
+}
+
+def toNum(val, defaultVal = null) {
+    if (val == null) return defaultVal
+    if (val instanceof Number) return val
+    if (val instanceof String) {
+        try {
+            return val.contains('.') ? Double.parseDouble(val.trim()) : Long.parseLong(val.trim())
+        } catch (Exception _e) {
+            return defaultVal
+        }
+    }
+    return defaultVal
+}
 
 def resolveReferences(params) {
     def reference_files = []
@@ -104,7 +127,23 @@ def resolveReferences(params) {
 
 
 workflow {
+// Check if user accidentally passed a parameter file with double-dash --params-file
+if (params.containsKey('paramsFile') || params.containsKey('params-file') || params.containsKey('params_file')) {
+    def pf = params.get('paramsFile') ?: params.get('params-file') ?: params.get('params_file')
+    error """
+    ================================================================================
+    ERROR: Parameter file '${pf}' was specified with a double dash (--params-file).
+    In Nextflow, core CLI options use a single dash: -params-file
+    Please run:
+      nextflow run main.nf -profile <profile> -params-file ${pf}
+    ================================================================================
+    """
+}
+
 // Validate required parameters
+if (!params.input) {
+    error "ERROR: --input parameter is required. Please specify an input file or pattern (e.g., via -params-file or --input 'path/*_R{1,2}.fastq.gz')."
+}
 if (!params.outdir) {
     error "ERROR: --outdir parameter is required. Please specify an output directory."
 }
@@ -112,40 +151,61 @@ if (!params.project) {
     error "ERROR: --project parameter is required. Please specify a project name."
 }
 
+// Coerce booleans (handles Nextflow 26+ CLI string parsing)
+def run_fastqc = toBool(params.run_fastqc)
+def run_dimer_check = toBool(params.run_dimer_check, true)
+def concat_all_reads = toBool(params.concat_all_reads)
+def use_sequoia = toBool(params.use_sequoia)
+def use_CKMR = toBool(params.use_CKMR)
+
+// Coerce numbers for validation
+def ots28_missing_threshold = toNum(params.ots28_missing_threshold)
+def gsi_missing_threshold = toNum(params.gsi_missing_threshold)
+def pofz_threshold = toNum(params.pofz_threshold)
+def allele_balance = toNum(params.allele_balance)
+def male_sexid_threshold = toNum(params.male_sexid_threshold)
+def female_sexid_threshold = toNum(params.female_sexid_threshold)
+def haplotype_depth = toNum(params.haplotype_depth)
+def total_depth = toNum(params.total_depth)
+def sexid_min_reads = toNum(params.sexid_min_reads)
+def sequoia_missing_threshold = toNum(params.sequoia_missing_threshold)
+def species_max_repro_age = toNum(params.species_max_repro_age)
+def species_min_repro_age = toNum(params.species_min_repro_age)
+
 // Validate numeric threshold ranges
-if (params.ots28_missing_threshold < 0 || params.ots28_missing_threshold > 1) {
+if (ots28_missing_threshold != null && (ots28_missing_threshold < 0 || ots28_missing_threshold > 1)) {
     error "ERROR: ots28_missing_threshold must be between 0 and 1 (got ${params.ots28_missing_threshold})"
 }
-if (params.gsi_missing_threshold < 0 || params.gsi_missing_threshold > 1) {
+if (gsi_missing_threshold != null && (gsi_missing_threshold < 0 || gsi_missing_threshold > 1)) {
     error "ERROR: gsi_missing_threshold must be between 0 and 1 (got ${params.gsi_missing_threshold})"
 }
-if (params.pofz_threshold < 0 || params.pofz_threshold > 1) {
+if (pofz_threshold != null && (pofz_threshold < 0 || pofz_threshold > 1)) {
     error "ERROR: pofz_threshold must be between 0 and 1 (got ${params.pofz_threshold})"
 }
-if (params.allele_balance < 0 || params.allele_balance > 1) {
+if (allele_balance != null && (allele_balance < 0 || allele_balance > 1)) {
     error "ERROR: allele_balance must be between 0 and 1 (got ${params.allele_balance})"
 }
-if (params.male_sexid_threshold < 0 || params.male_sexid_threshold > 1) {
+if (male_sexid_threshold != null && (male_sexid_threshold < 0 || male_sexid_threshold > 1)) {
     error "ERROR: male_sexid_threshold must be between 0 and 1 (got ${params.male_sexid_threshold})"
 }
-if (params.female_sexid_threshold < 0 || params.female_sexid_threshold > 1) {
+if (female_sexid_threshold != null && (female_sexid_threshold < 0 || female_sexid_threshold > 1)) {
     error "ERROR: female_sexid_threshold must be between 0 and 1 (got ${params.female_sexid_threshold})"
 }
-if (params.haplotype_depth < 0) {
+if (haplotype_depth != null && haplotype_depth < 0) {
     error "ERROR: haplotype_depth must be non-negative (got ${params.haplotype_depth})"
 }
-if (params.total_depth < 0) {
+if (total_depth != null && total_depth < 0) {
     error "ERROR: total_depth must be non-negative (got ${params.total_depth})"
 }
-if (params.sexid_min_reads < 0) {
+if (sexid_min_reads != null && sexid_min_reads < 0) {
     error "ERROR: sexid_min_reads must be non-negative (got ${params.sexid_min_reads})"
 }
 
-if (params.use_sequoia) { // only validated if Sequoia is used
-    if (params.sequoia_missing_threshold < 0 || params.sequoia_missing_threshold > 1) {
+if (use_sequoia) { // only validated if Sequoia is used
+    if (sequoia_missing_threshold != null && (sequoia_missing_threshold < 0 || sequoia_missing_threshold > 1)) {
         error "ERROR: sequoia_missing_threshold must be between 0 and 1 (got ${params.sequoia_missing_threshold})"
     }
-    if (params.species_max_repro_age < params.species_min_repro_age) {
+    if (species_max_repro_age != null && species_min_repro_age != null && species_max_repro_age < species_min_repro_age) {
         error "ERROR: species_max_repro_age (${params.species_max_repro_age}) must be >= species_min_repro_age (${params.species_min_repro_age})"
     }
     if (!params.offspring_maxBY) {
@@ -196,13 +256,12 @@ if (params.use_sequoia) { // only validated if Sequoia is used
 
     // Create reference channel with associated files
     if (reference_files.isEmpty()) {
-        reference_ch = Channel.empty()
+        reference_ch = channel.empty()
     } else {
-        Channel
+        channel
             .fromList(reference_files)
         .flatMap { ref ->
             // For each reference, check all required index files
-            def ref_file = file(ref)
             def required_extensions = ['', '.amb', '.ann', '.bwt', '.fai', '.pac', '.sa']
             def missing_files = []
             
@@ -225,7 +284,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         }
         .collect()
         .map { files -> 
-            files.groupBy { it.simpleName }
+            files.groupBy { f -> f.simpleName }
         }
         .flatMap { refMap -> 
             refMap.collect { refName, refFiles ->
@@ -248,7 +307,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         locus_index_file = "${projectDir}/data/indices/transition_loci_indices_20241104.csv"
         log.info "No locus index provided, using default: ${locus_index_file}"
     }
-    locus_index_ch = channel.fromPath(locus_index_file, checkIfExists: true)
+    _locus_index_ch = channel.fromPath(locus_index_file, checkIfExists: true)
 
     def baseline_file
     if (params.containsKey('baseline')) {
@@ -266,7 +325,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         ots28_baseline_file = "${projectDir}/data/baselines/full/RoSA_baseline_partial_infile.txt"
         log.info "No OTS28 baseline for Structure provided, using default: ${ots28_baseline_file}"
     }
-    ots28_baseline_ch = channel.fromPath(ots28_baseline_file, checkIfExists: true)
+    _ots28_baseline_ch = channel.fromPath(ots28_baseline_file, checkIfExists: true)
 
     def rosa_allele_key_file
     if (params.containsKey('rosa_allele_key')) {
@@ -279,18 +338,18 @@ if (params.use_sequoia) { // only validated if Sequoia is used
 
     // Define input channels with automatic read type detection
     if (params.input_format == 'paired') {
-        Channel
+        channel
             .fromFilePairs(params.input, checkIfExists: true)
             .map { id, reads -> tuple(id, 'paired', reads) }
             .set { ch_input_reads }
     } else if (params.input_format == 'single') {
-        Channel
+        channel
             .fromPath(params.input, checkIfExists: true)
             .map { file -> tuple(file.simpleName, 'single', file) }
             .set { ch_input_reads }
     } else {
         // Auto-detect format based on file pattern matching
-        Channel
+        channel
             .fromFilePairs(params.input, checkIfExists: true, size: -1)
             .map { id, reads -> 
                 def readType = reads.size() > 1 ? 'paired' : 'single'
@@ -299,8 +358,8 @@ if (params.use_sequoia) { // only validated if Sequoia is used
             .set { ch_input_reads }
     }
         
-    if (params.run_fastqc) {
-        ch_input_fastq = Channel
+    if (run_fastqc) {
+        ch_input_fastq = channel
             .fromPath(params.input, checkIfExists: true)
             .collect()
         FASTQC(ch_input_fastq) // FASTQC all input files
@@ -308,9 +367,9 @@ if (params.use_sequoia) { // only validated if Sequoia is used
 
     // Branch workflow based on read type
     ch_input_reads
-        .branch {
-            paired: it[1] == 'paired'
-            single: it[1] == 'single'
+        .branch { read ->
+            paired: read[1] == 'paired'
+            single: read[1] == 'single'
         }
         .set { ch_reads_branched }
 
@@ -319,7 +378,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         .combine(adapters_ch)
         .set { ch_paired_adapters }
 
-    if (params.run_dimer_check) {
+    if (run_dimer_check) {
         DIMER_ANALYSIS(ch_reads_branched.paired, params.min_overlap, params.min_outie_overlap, params.max_overlap)
 
         merged_counts = DIMER_ANALYSIS.out.counts
@@ -329,7 +388,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
                 storeDir: "${params.outdir}/${params.project}/dimers/summary"
             )
     } else {
-        merged_counts = Channel.empty()
+        merged_counts = channel.empty()
     }
 
     TRIMMOMATIC(ch_paired_adapters, params.trim_params)
@@ -343,9 +402,9 @@ if (params.use_sequoia) { // only validated if Sequoia is used
     TRIMMOMATIC_SINGLE(ch_single_adapters, params.trim_params)
 
     // Choose read processing approach based on parameter
-    if (params.concat_all_reads) {
+    if (concat_all_reads) {
         // Collect all available reads per sample for concatenation
-        ch_all_reads_per_sample = Channel.empty()
+        ch_all_reads_per_sample = channel.empty()
         
         // Add merged reads from FLASH2
         ch_all_reads_per_sample = ch_all_reads_per_sample.mix(
@@ -375,7 +434,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         ch_processed_reads = CONCAT_READS.out.concatenated
     } else {
         // Original approach - only merged and single-end reads
-        ch_processed_reads = Channel.empty()
+        ch_processed_reads = channel.empty()
         ch_processed_reads = ch_processed_reads.mix(
             FLASH2.out.merged,
             TRIMMOMATIC_SINGLE.out.trimmed
@@ -388,18 +447,18 @@ if (params.use_sequoia) { // only validated if Sequoia is used
 
     // For 'full' panel, also run full genome mapping for VGLL3SIX6/LFAR/WRAP loci
     // These loci require full genome mapping to correctly handle off-target amplicons
-    def ch_thinned_fasta = Channel.empty()
+    def ch_thinned_fasta = channel.empty()
     if (params.panel?.toLowerCase() == 'full') {
         log.info "Running parallel full genome mapping for VGLL3SIX6/LFAR/WRAP loci"
         log.info "Using combined region file: ${params.fullgenome_region_file}"
 
         // Initialize channels for merging downstream
-        ch_thinned_fasta = Channel.empty()
-        def ch_map_bam = Channel.empty()
-        def ch_thinned_indices = Channel.empty() // Will collect indices differently
+        ch_thinned_fasta = channel.empty()
+        def ch_map_bam = channel.empty()
+        def ch_thinned_indices = channel.empty() // Will collect indices differently
 
         // Get the combined region file (contains all LFAR + WRAP + VGLL3SIX6 regions)
-        region_file = Channel.fromPath(params.fullgenome_region_file).collect()
+        region_file = channel.fromPath(params.fullgenome_region_file).collect()
 
         if (params.full_genome_mount_path) {
             log.info "Using mounted genome at: ${params.full_genome_mount_path}"
@@ -417,7 +476,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
                 .toSortedList({ a, b -> a[0] <=> b[0] })
                 .flatMap { sorted_list -> 
                     sorted_list.collate(params.fullgenome_chunk_size ?: 30).collect { chunk -> 
-                        tuple(chunk.collect{it[0]}, chunk.collect{it[1]}) 
+                        tuple(chunk.collect { c -> c[0] }, chunk.collect { c -> c[1] }) 
                     }
                 }
 
@@ -452,7 +511,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
                 .toSortedList({ a, b -> a[0] <=> b[0] })
                 .flatMap { sorted_list -> 
                     sorted_list.collate(params.fullgenome_chunk_size ?: 30).collect { chunk -> 
-                        tuple(chunk.collect{it[0]}, chunk.collect{it[1]}) 
+                        tuple(chunk.collect { c -> c[0] }, chunk.collect { c -> c[1] }) 
                     }
                 }
 
@@ -498,14 +557,14 @@ if (params.use_sequoia) { // only validated if Sequoia is used
     SAMTOOLS(ch_aligned_sam)
     // Collect all idxstats files
     idxstats_files_sorted = SAMTOOLS.out.idxstats
-        .branch {
-            main: it[1] ==~ "transition|full|${params.fullgenome_ref_name}"
+        .branch { record ->
+            main: record[1] ==~ "transition|full|${params.fullgenome_ref_name}"
             other: true
-            }
+        }
 
     idxstats_main = idxstats_files_sorted.main
-        .map { it -> it[2] }  // Extract just the file path from the tuple
-        .collect()            // Collect all files into a single list
+        .map { stat -> stat[2] }  // Extract just the file path from the tuple
+        .collect()                // Collect all files into a single list
 
     // Run the analysis
     ANALYZE_IDXSTATS(idxstats_main)
@@ -524,8 +583,8 @@ if (params.use_sequoia) { // only validated if Sequoia is used
             
             def result = []
             chunks.eachWithIndex { chunk, index ->
-                def chunk_bams = chunk.collect { it[1] }
-                def chunk_bais = chunk.collect { it[2] }
+                def chunk_bams = chunk.collect { c -> c[1] }
+                def chunk_bais = chunk.collect { c -> c[2] }
                 result << tuple(reference, chunk_bams, chunk_bais, index)
             }
             return result
@@ -533,12 +592,12 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         .set { mpileup_chunks }
 
     // Build mpileup_input - need to match reference files to BAM groups
-    // For 'full' panel, we have two reference types: "full" and "Chinook_FullPanel_VGLL3Six6LFARWRAP"
+    // For 'full' panel, we have two reference types: "full" and "Chinook_FullPanel_VGLL3SIX6LFARWRAP"
     if (params.panel?.toLowerCase() == 'full') {
         // Split by reference type
         mpileup_chunks
-            .branch {
-                fullgenome: it[0] == params.fullgenome_ref_name
+            .branch { chunk ->
+                fullgenome: chunk[0] == params.fullgenome_ref_name
                 targetfasta: true
             }
             .set { bam_branches }
@@ -547,8 +606,8 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         mpileup_targetfasta = bam_branches.targetfasta
             .map { reference, bams, bais, index ->
                 def ref_file = reference_files
-                    .collect { file(it) }
-                    .find { it.simpleName == reference }
+                    .collect { ref -> file(ref) }
+                    .find { ref -> ref.simpleName == reference }
                 if (!ref_file) {
                     error "No exact match found for reference: ${reference}"
                 }
@@ -569,8 +628,8 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         mpileup_input = mpileup_chunks
             .map { reference, bams, bais, index ->
                 def ref_file = reference_files
-                    .collect { file(it) }
-                    .find { it.simpleName == reference }
+                    .collect { ref -> file(ref) }
+                    .find { ref -> ref.simpleName == reference }
                 if (!ref_file) {
                     error "No exact match found for reference: ${reference}. Use 'full' as the reference panel."
                 }
@@ -585,7 +644,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         .groupTuple(by: 0)
         .map { reference, vcfs, csis ->
             def sorted = [vcfs, csis].transpose().sort { a, b -> a[0].name <=> b[0].name }
-            tuple(reference, sorted.collect { it[0] }, sorted.collect { it[1] })
+            tuple(reference, sorted.collect { s -> s[0] }, sorted.collect { s -> s[1] })
         }
         .set { ch_vcfs_to_merge }
 
@@ -593,7 +652,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
         .groupTuple(by: 0)
         .map { reference, vcfs, csis ->
             def sorted = [vcfs, csis].transpose().sort { a, b -> a[0].name <=> b[0].name }
-            tuple(reference, sorted.collect { it[0] }, sorted.collect { it[1] })
+            tuple(reference, sorted.collect { s -> s[0] }, sorted.collect { s -> s[1] })
         }
         .set { ch_filtered_vcfs_to_merge }
 
@@ -606,7 +665,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
 
     // Filter VCFs for Greb Hapstr (RoSA) - only need the main reference, not full genome
     BCFTOOLS_MERGE.out.filtered_vcf
-        .filter { reference, vcf -> 
+        .filter { reference, _vcf -> 
              reference != params.fullgenome_ref_name 
         }
         .set { vcf_for_rosa }
@@ -625,8 +684,8 @@ if (params.use_sequoia) { // only validated if Sequoia is used
             // Return a list of tuples for each chunk
             def result = []
             chunks.eachWithIndex { chunk, index ->
-                def chunk_sample_ids = chunk.collect { it[0] }
-                def chunk_sams = chunk.collect { it[1] }
+                def chunk_sample_ids = chunk.collect { c -> c[0] }
+                def chunk_sams = chunk.collect { c -> c[1] }
                 
                 // Get the VCF file for this reference
                 def vcfFile = file("${projectDir}/data/VCFs/${reference}.vcf")
@@ -647,7 +706,7 @@ if (params.use_sequoia) { // only validated if Sequoia is used
 
     // Collect all RDS files across all chunks and references, sorting deterministically
     PREP_MHP_RDS.out.rds
-        .map { reference, rds_files -> rds_files }
+        .map { _reference, rds_files -> rds_files }
         .collect()
         .map { all_rds_files -> 
              tuple("combined", all_rds_files.flatten().sort { a, b -> a.name <=> b.name }) 
@@ -658,15 +717,15 @@ if (params.use_sequoia) { // only validated if Sequoia is used
     GEN_HAPS(combined_rds)
 
     // Collect all QC files
-    ch_multiqc_files = Channel.empty()
-    if (params.run_fastqc) {
+    ch_multiqc_files = channel.empty()
+    if (run_fastqc) {
         ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.fastqc_results)
     }
     ch_multiqc_files = ch_multiqc_files.mix(TRIMMOMATIC.out.log)
     ch_multiqc_files = ch_multiqc_files.mix(FLASH2.out.log)
     //ch_multiqc_files = ch_multiqc_files.mix(BWA_MEM.out.log)
-    ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect{it[2]})
-    if (params.run_dimer_check) {
+    ch_multiqc_files = ch_multiqc_files.mix(SAMTOOLS.out.idxstats.collect { s -> s[2] })
+    if (run_dimer_check) {
         ch_multiqc_files = ch_multiqc_files.mix(merged_counts)
     }
     //ch_multiqc_files.view { println "Debug: MultiQC input file: $it" }
@@ -675,16 +734,16 @@ if (params.use_sequoia) { // only validated if Sequoia is used
     RUN_RUBIAS(GREB_HAPSTR.out.ots28_report, baseline_ch, params.panel.toLowerCase(), GEN_HAPS.out.haps, ANALYZE_IDXSTATS.out.sexid)
     
     // Run CKMR analysis
-    if (params.use_CKMR) {
-        par_geno_wide = Channel.fromPath(params.CKMR_parent_geno_input, checkIfExists: true)
-        extra_genos_allele_freqs = Channel.fromPath(params.CKMR_extra_genos_allele_freqs)
+    if (use_CKMR) {
+        par_geno_wide = channel.fromPath(params.CKMR_parent_geno_input, checkIfExists: true)
+        extra_genos_allele_freqs = channel.fromPath(params.CKMR_extra_genos_allele_freqs)
         CKMR_PO(GEN_HAPS.out.haps, par_geno_wide, extra_genos_allele_freqs)
         CKMRSIM_RUBIAS_SUMMARY(RUN_RUBIAS.out.summary, CKMR_PO.out.PO_results)
     }
     // Run PBT analysis
-    if (params.use_sequoia) {
-        par_geno_file = Channel.fromPath(params.parent_geno_input, checkIfExists: true)
-        par_lh_file = Channel.fromPath(params.parent_lifehistory, checkIfExists: true)
+    if (use_sequoia) {
+        par_geno_file = channel.fromPath(params.parent_geno_input, checkIfExists: true)
+        par_lh_file = channel.fromPath(params.parent_lifehistory, checkIfExists: true)
         RUN_SEQUOIA(par_geno_file, par_lh_file, GEN_HAPS.out.haps, params.offspring_birthyear, params.offspring_minBY, params.offspring_maxBY, params.offspring_max_age)
     }
 }

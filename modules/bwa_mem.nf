@@ -15,7 +15,7 @@ process BWA_MEM {
     tuple val(sample_id), val(ref_name), path("${sample_id}_${ref_name}_aln.sam"), emit: aligned_sam
 
     script:
-    def reference_fasta = ref_and_index_files.find { it.name =~ /\.(fasta|fna)$/ }
+    def reference_fasta = ref_and_index_files.find { f -> f.name =~ /\.(fasta|fna)$/ }
     """
     bwa mem \
         -M \
